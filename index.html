@@ -48,12 +48,14 @@
         .master-table tr:hover { background: #f1f5f9; cursor: pointer; }
 
         /* Detail Projektu */
-        .project-header { padding: 1.5rem; border-bottom: 1px solid var(--border); }
+        .project-header { padding: 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
         .project-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
         
         /* Modal */
         .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
-        .modal { background: var(--card); padding: 1.5rem; border-radius: 12px; width: 100%; max-width: 500px; }
+        .modal { background: var(--card); padding: 1.5rem; border-radius: 12px; width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; }
+        .modal label { display: block; margin-top: 12px; font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
+        .modal input, .modal select, .modal textarea { width: 100%; padding: 10px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; outline: none; }
     </style>
 </head>
 <body x-data="pulseApp()" x-init="initPB()">
@@ -62,9 +64,9 @@
         <div class="app-container" style="display: flex; justify-content: center; padding-top: 10vh;">
             <div class="card" style="padding: 2rem; width: 100%; max-width: 380px;">
                 <h2 style="margin: 0 0 1.5rem 0;">Pulse</h2>
-                <input type="text" x-model="pbUrl" placeholder="URL PocketBase" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid var(--border)">
-                <input type="email" x-model="email" placeholder="Email" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid var(--border)">
-                <input type="password" x-model="pass" placeholder="Heslo" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid var(--border)">
+                <input type="text" x-model="pbUrl" placeholder="URL PocketBase">
+                <input type="email" x-model="email" placeholder="Email">
+                <input type="password" x-model="pass" placeholder="Heslo">
                 <button @click="login()" style="width:100%; padding:12px; border-radius:8px; border:none; background:var(--primary); color:white; font-weight:600; cursor:pointer">Vstoupit</button>
             </div>
         </div>
@@ -128,31 +130,18 @@
                 <template x-if="activeProject">
                     <div>
                         <button @click="activeProject = null" class="icon-btn" style="margin-bottom: 10px; font-size: 0.8rem; font-weight: 600;">
-                            <span class="icon" style="font-size: 18px;">arrow_back</span> Zpět na seznam
+                            <span class="icon" style="font-size: 18px;">arrow_back</span> Zpět
                         </button>
-
                         <div class="card project-header">
                             <div style="display:flex; justify-content:space-between; align-items:start">
                                 <h2 x-text="activeProject.title" style="margin:0"></h2>
-                                <button class="icon-btn" @click="openEdit(activeProject)"><span class="icon">edit</span></button>
+                                <button class="icon-btn" @click="openEdit(activeProject)"><span class="icon">settings</span></button>
                             </div>
-                            <p x-text="activeProject.description || 'Bez popisu'" style="color:var(--text-dim); font-size:0.9rem; margin:10px 0"></p>
-                            
-                            <div class="project-meta">
-                                <div>
-                                    <label style="font-size:0.7rem; font-weight:700; color:var(--text-dim); text-transform:uppercase">Status</label>
-                                    <div :style="'color:'+activeProject.expand?.status?.color" x-text="activeProject.expand?.status?.title" style="font-weight:700"></div>
-                                </div>
-                                <div>
-                                    <label style="font-size:0.7rem; font-weight:700; color:var(--text-dim); text-transform:uppercase">Termín</label>
-                                    <div x-text="activeProject.due_date ? formatDate(activeProject.due_date) : '-'"></div>
-                                </div>
-                            </div>
+                            <p x-text="activeProject.description || 'Žádný popis...'" style="color:var(--text-dim); font-size:0.9rem; margin-top:8px"></p>
                         </div>
 
-                        <h3 style="margin: 1.5rem 0 1rem 0;">Podúkoly</h3>
-                        <div class="card quick-add" style="margin-bottom: 1rem;">
-                            <input type="text" x-model="newTaskTitle" @keyup.enter="addTask(activeProject.id)" placeholder="Přidat podúkol k tomuto projektu...">
+                        <div class="card quick-add">
+                            <input type="text" x-model="newTaskTitle" @keyup.enter="addTask(activeProject.id)" placeholder="Přidat podúkol...">
                             <button @click="addTask(activeProject.id)" class="icon-btn" style="color: var(--primary)"><span class="icon">add_circle</span></button>
                         </div>
 
@@ -160,7 +149,7 @@
                             <template x-for="sub in tasks.filter(t => t.parent_task === activeProject.id)" :key="sub.id">
                                 <div class="card task-item">
                                     <div style="flex:1; cursor:pointer" @click="openEdit(sub)">
-                                        <span x-text="sub.title" :style="sub.expand?.status?.is_closed ? 'text-decoration: line-through; opacity: 0.5' : 'font-weight:600'"></span>
+                                        <div x-text="sub.title" :style="sub.expand?.status?.is_closed ? 'text-decoration: line-through; opacity: 0.5' : 'font-weight:600'"></div>
                                         <div style="font-size:0.7rem; color:var(--text-dim)" x-text="sub.due_date ? formatDate(sub.due_date) : ''"></div>
                                     </div>
                                     <div style="display: flex; gap: 8px;">
@@ -176,32 +165,64 @@
 
             <template x-if="editingTask">
                 <div class="modal-overlay" @click.self="editingTask = null">
-                    <div class="modal card">
-                        <h3 style="margin-top:0">Upravit</h3>
-                        <label style="font-size:0.7rem; font-weight:700; color:var(--text-dim)">Název</label>
-                        <input type="text" x-model="editingTask.title" style="width:100%; padding:8px; margin-bottom:10px; border-radius:6px; border:1px solid var(--border)">
-                        
-                        <label style="font-size:0.7rem; font-weight:700; color:var(--text-dim)">Popis</label>
-                        <textarea x-model="editingTask.description" style="width:100%; padding:8px; margin-bottom:10px; border-radius:6px; border:1px solid var(--border); min-height:60px"></textarea>
+                    <div class="modal">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem">
+                            <h3 style="margin:0" x-text="mode === 'core' ? 'Rychlá úprava' : 'Správa záznamu'"></h3>
+                            <span x-text="mode === 'core' ? 'Core Mode' : 'Master Mode'" style="font-size:0.6rem; background:#eef2ff; color:var(--primary); padding:2px 6px; border-radius:4px; font-weight:700"></span>
+                        </div>
+
+                        <label>Název</label>
+                        <input type="text" x-model="editingTask.title">
+
+                        <label>Popis</label>
+                        <textarea x-model="editingTask.description" style="width:100%; min-height:80px; margin-top:4px; border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit;"></textarea>
 
                         <div style="display:flex; gap:10px">
                             <div style="flex:1">
-                                <label style="font-size:0.7rem; font-weight:700; color:var(--text-dim)">Termín</label>
-                                <input type="datetime-local" x-model="editingTask.due_date" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border)">
+                                <label>Termín</label>
+                                <input type="datetime-local" x-model="editingTask.due_date">
                             </div>
-                            <div style="flex:1">
-                                <label style="font-size:0.7rem; font-weight:700; color:var(--text-dim)">Status</label>
-                                <select x-model="editingTask.status" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border)">
-                                    <template x-for="s in statuses" :key="s.id">
-                                        <option :value="s.id" x-text="s.title" :selected="s.id == editingTask.status"></option>
+                            <template x-if="mode === 'master'">
+                                <div style="flex:1">
+                                    <label>Status</label>
+                                    <select x-model="editingTask.status">
+                                        <template x-for="s in statuses" :key="s.id">
+                                            <option :value="s.id" x-text="s.title" :selected="s.id == editingTask.status"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </template>
+                        </div>
+
+                        <label>Přiřazení (Ctrl+klik)</label>
+                        <select x-model="editingTask.assignee" multiple style="height: 70px;">
+                            <template x-for="u in availableUsers" :key="u.id">
+                                <option :value="u.id" x-text="u.name || u.email"></option>
+                            </template>
+                        </select>
+
+                        <template x-if="mode === 'master'">
+                            <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border)">
+                                <label>Nadřazený projekt / Task</label>
+                                <select x-model="editingTask.parent_task">
+                                    <option value="">-- Žádný (Top Level) --</option>
+                                    <template x-for="t in tasks.filter(t => t.id !== editingTask.id)" :key="t.id">
+                                        <option :value="t.id" x-text="t.title"></option>
+                                    </template>
+                                </select>
+
+                                <label>Tagy (ID z tabulky main_tags)</label>
+                                <select x-model="editingTask.tags" multiple style="height: 60px;">
+                                    <template x-for="tag in allTags" :key="tag.id">
+                                        <option :value="tag.id" x-text="tag.title"></option>
                                     </template>
                                 </select>
                             </div>
-                        </div>
+                        </template>
 
-                        <div style="display:flex; gap:10px; margin-top:15px">
-                            <button @click="saveEdit()" style="flex:2; padding:10px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600">Uložit</button>
-                            <button @click="editingTask = null" style="flex:1; padding:10px; background:#f1f5f9; border:none; border-radius:8px; cursor:pointer">Zavřít</button>
+                        <div style="display:flex; gap:10px; margin-top:20px">
+                            <button @click="saveEdit()" style="flex:2; padding:12px; background:var(--primary); color:white; border:none; border-radius:10px; cursor:pointer; font-weight:600">Uložit změny</button>
+                            <button @click="editingTask = null" style="flex:1; padding:12px; background:#f1f5f9; border:none; border-radius:10px; cursor:pointer">Zavřít</button>
                         </div>
                     </div>
                 </div>
@@ -213,8 +234,8 @@
         function pulseApp() {
             return {
                 user: null, pb: null, pbUrl: localStorage.getItem('pulse_pb_url') || '',
-                email: '', pass: '', mode: 'core', tasks: [], availableUsers: [], statuses: [],
-                newTaskTitle: '', editingTask: null, activeProject: null,
+                email: '', pass: '', mode: 'core', tasks: [], availableUsers: [], statuses: [], allTags: [],
+                newTaskTitle: '', editingTask: null, activeProject: null, errorMessage: '',
 
                 async initPB() {
                     if (this.pbUrl) {
@@ -225,59 +246,62 @@
                     }
                 },
                 async login() {
-                    this.pb = new PocketBase(this.pbUrl);
-                    await this.pb.collection('users').authWithPassword(this.email, this.pass);
-                    localStorage.setItem('pulse_pb_url', this.pbUrl);
-                    this.user = this.pb.authStore.model; await this.loadData();
+                    try {
+                        this.pb = new PocketBase(this.pbUrl);
+                        await this.pb.collection('users').authWithPassword(this.email, this.pass);
+                        localStorage.setItem('pulse_pb_url', this.pbUrl);
+                        this.user = this.pb.authStore.model; await this.loadData();
+                    } catch (e) { alert("Chyba přihlášení"); }
                 },
                 logout() { if (this.pb) this.pb.authStore.clear(); this.user = null; },
 
                 async loadData() {
                     if (!this.pb) return;
                     try {
-                        const [t, s] = await Promise.all([
+                        const [t, s, u, tags] = await Promise.all([
                             this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task' }),
-                            this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' })
+                            this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' }),
+                            this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' }),
+                            this.pb.collection('main_tags').getFullList() // Předpokládám tabulku main_tags
                         ]);
-                        this.tasks = t; this.statuses = s;
-                        // Refresh active project data if open
-                        if (this.activeProject) {
-                            this.activeProject = this.tasks.find(tk => tk.id === this.activeProject.id);
-                        }
+                        this.tasks = t; this.statuses = s; this.availableUsers = u; this.allTags = tags;
+                        if (this.activeProject) this.activeProject = this.tasks.find(tk => tk.id === this.activeProject.id);
                     } catch (e) { console.error(e); }
                 },
 
                 async addTask(parentId = null) {
                     if (!this.newTaskTitle) return;
                     await this.pb.collection('pulse_tasks').create({ 
-                        title: this.newTaskTitle, 
-                        assignee: [this.user.id],
-                        parent_task: parentId 
+                        title: this.newTaskTitle, assignee: [this.user.id], parent_task: parentId 
                     });
                     this.newTaskTitle = ''; await this.loadData();
                 },
-
                 async completeTask(task) {
                     const done = this.statuses.find(s => s.is_closed);
                     if (done) { await this.pb.collection('pulse_tasks').update(task.id, { status: done.id }); await this.loadData(); }
                 },
-
                 async claimTask(task) {
                     let ids = [...(task.assignee || [])];
                     ids = ids.includes(this.user.id) ? ids.filter(i => i !== this.user.id) : [...ids, this.user.id];
                     await this.pb.collection('pulse_tasks').update(task.id, { assignee: ids }); await this.loadData();
                 },
-
                 openEdit(task) {
-                    this.editingTask = { ...task, due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '' };
+                    this.editingTask = { 
+                        ...task, 
+                        due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '' 
+                    };
                 },
-
                 async saveEdit() {
-                    const { id, title, description, status, due_date } = this.editingTask;
-                    await this.pb.collection('pulse_tasks').update(id, { title, description, status, due_date: due_date || null });
+                    const { id, title, description, status, due_date, assignee, parent_task, tags } = this.editingTask;
+                    const data = { title, description, due_date: due_date || null, assignee };
+                    if (this.mode === 'master') {
+                        data.status = status;
+                        data.parent_task = parent_task || null;
+                        data.tags = tags || [];
+                    }
+                    await this.pb.collection('pulse_tasks').update(id, data);
                     this.editingTask = null; await this.loadData();
                 },
-
                 formatDate(d) { return new Date(d).toLocaleDateString('cs-CZ', {day:'numeric', month:'short'}); }
             }
         }
