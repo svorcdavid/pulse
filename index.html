@@ -175,6 +175,25 @@
 
         /* Icons Utils */
         .icon { font-family: 'Material Symbols Rounded'; font-size: 20px; vertical-align: middle; }
+
+        .task-item {
+        justify-content: space-between; /* Roztáhne obsah */
+        }
+
+        .task-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-switcher {
+            font-size: 0.8rem;
+            padding: 2px;
+        }
+
+        .mode-btn {
+            padding: 4px 10px;
+        }
     </style>
 </head>
 <body x-data="pulseApp()" x-init="initPB()">
@@ -345,6 +364,44 @@
 
                 // ... zbytek funkcí (claimTask, formatDate) zůstává stejný, 
                 // jen místo 'pb.' používej 'this.pb.'
+            }
+        }
+        async function completeTask(task) {
+            try {
+                // Najdeme ID statusu, který má is_closed = true
+                const statuses = await this.pb.collection('pulse_statuses').getFullList();
+                const doneStatus = statuses.find(s => s.is_closed === true);
+                
+                if (doneStatus) {
+                    await this.pb.collection('pulse_tasks').update(task.id, {
+                        status: doneStatus.id
+                    });
+                    this.loadTasks(); // Refresh
+                } else {
+                    alert("Chyba: V PocketBase chybí status s označením 'is_closed'");
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        async function claimTask(task) {
+            try {
+                let newAssignees = [...task.assignee];
+                
+                if (newAssignees.includes(this.user.id)) {
+                    // Pokud už tam jsem, odeberu se (toggle)
+                    newAssignees = newAssignees.filter(id => id !== this.user.id);
+                } else {
+                    // Pokud tam nejsem, přidám se
+                    newAssignees.push(this.user.id);
+                }
+
+                await this.pb.collection('pulse_tasks').update(task.id, {
+                    assignee: newAssignees
+                });
+                this.loadTasks();
+            } catch (err) {
+                console.error(err);
             }
         }
     </script>
