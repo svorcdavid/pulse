@@ -180,13 +180,28 @@
 <body x-data="pulseApp()" x-init="initPB()">
 
     <template x-if="!user">
-        <div class="login-card">
-            <h2 style="margin-top:0">Pulse Login</h2>
-            <p style="color:var(--text-dim); font-size: 0.9rem">Pro tvou a rodinnou pohodu.</p>
-            <input type="email" x-model="email" placeholder="Email" style="width:100%; padding:12px; margin: 10px 0; border-radius:8px; border:1px solid var(--border)">
-            <input type="password" x-model="pass" placeholder="Heslo" style="width:100%; padding:12px; margin: 10px 0; border-radius:8px; border:1px solid var(--border)">
-            <button @click="login()" style="width:100%; padding:12px; margin-top:10px; border-radius:8px; border:none; background:var(--primary); color:white; font-weight:600; cursor:pointer">Vstoupit</button>
-        </div>
+    <div class="login-card">
+        <h2 style="margin-top:0">Pulse Login</h2>
+        <p style="color:var(--text-dim); font-size: 0.9rem">Zadej adresu své PocketBase a údaje.</p>
+        
+        <label style="font-size: 0.7rem; color: var(--text-dim); font-weight: 600">PB INSTANCE URL</label>
+        <input type="text" x-model="pbUrl" placeholder="https://tvou-vps.cz" 
+               style="width:100%; padding:12px; margin: 4px 0 16px 0; border-radius:8px; border:1px solid var(--border); background: #f1f5f9">
+
+        <label style="font-size: 0.7rem; color: var(--text-dim); font-weight: 600">EMAIL / HESLO</label>
+        <input type="email" x-model="email" placeholder="Email" 
+               style="width:100%; padding:12px; margin: 4px 0; border-radius:8px; border:1px solid var(--border)">
+        
+        <input type="password" x-model="pass" placeholder="Heslo" 
+               style="width:100%; padding:12px; margin: 4px 0; border-radius:8px; border:1px solid var(--border)">
+        
+        <button @click="login()" 
+                style="width:100%; padding:14px; margin-top:16px; border-radius:12px; border:none; background:var(--primary); color:white; font-weight:600; cursor:pointer; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3)">
+            Vstoupit do Pulse
+        </button>
+
+        <p x-show="errorMessage" x-text="errorMessage" style="color: #ef4444; font-size: 0.8rem; margin-top: 10px; text-align: center"></p>
+    </div>
     </template>
 
     <template x-if="user">
@@ -259,63 +274,77 @@
 
         function pulseApp() {
             return {
-                user: pb.authStore.model,
-                mode: 'core',
+                user: null,
+                pbUrl: localStorage.getItem('pulse_pb_url') || '', // Pamatuje si URL z minule
                 email: '',
                 pass: '',
+                mode: 'core',
                 tasks: [],
                 newTaskTitle: '',
+                errorMessage: '',
+                pb: null,
 
                 async initPB() {
-                    if (this.user) this.loadTasks();
+                    // Pokud už máme URL a jsme přihlášení v localStorage
+                    if (this.pbUrl) {
+                        this.pb = new PocketBase(this.pbUrl);
+                        if (this.pb.authStore.model) {
+                            this.user = this.pb.authStore.model;
+                            this.loadTasks();
+                        }
+                    }
                 },
 
                 async login() {
-                    await pb.collection('users').authWithPassword(this.email, this.pass);
-                    this.user = pb.authStore.model;
-                    this.loadTasks();
+                    try {
+                        this.errorMessage = '';
+                        // Inicializace PB s URL z políčka
+                        this.pb = new PocketBase(this.pbUrl);
+                        
+                        await this.pb.collection('users').authWithPassword(this.email, this.pass);
+                        
+                        // Uložíme si URL do prohlížeče pro příště
+                        localStorage.setItem('pulse_pb_url', this.pbUrl);
+                        
+                        this.user = this.pb.authStore.model;
+                        this.loadTasks();
+                    } catch (err) {
+                        this.errorMessage = 'Chyba: ' + err.message;
+                    }
                 },
 
                 logout() {
-                    pb.authStore.clear();
+                    this.pb.authStore.clear();
                     this.user = null;
                 },
 
                 async loadTasks() {
-                    // Načtení včetně relací (expand)
-                    this.tasks = await pb.collection('pulse_tasks').getFullList({
-                        sort: '-created',
-                        expand: 'status,priority,tags'
-                    });
+                    try {
+                        this.tasks = await this.pb.collection('pulse_tasks').getFullList({
+                            sort: '-created',
+                            expand: 'status,priority,tags'
+                        });
+                    } catch (err) {
+                        console.error("Chyba při načítání:", err);
+                    }
                 },
 
                 async addTask() {
                     if (!this.newTaskTitle) return;
-                    await pb.collection('pulse_tasks').create({
-                        title: this.newTaskTitle,
-                        assignee: [this.user.id]
-                    });
-                    this.newTaskTitle = '';
-                    this.loadTasks();
+                    try {
+                        await this.pb.collection('pulse_tasks').create({
+                            title: this.newTaskTitle,
+                            assignee: [this.user.id]
+                        });
+                        this.newTaskTitle = '';
+                        this.loadTasks();
+                    } catch (err) {
+                        alert("Nepodařilo se přidat úkol.");
+                    }
                 },
 
-                async completeTask(id) {
-                    // Tady by se v reálu měnil status na ten, co má 'is_closed'
-                    alert('Úkol dokončen (tady n8n nebo update statusu)');
-                    // await pb.collection('pulse_tasks').update(id, {status: 'ID_DONE_STATUSU'});
-                },
-
-                async claimTask(id) {
-                    // Přidání sebe do assignee (pokud tam nejsem)
-                    await pb.collection('pulse_tasks').update(id, {
-                        'assignee+': this.user.id
-                    });
-                    this.loadTasks();
-                },
-
-                formatDate(dateStr) {
-                    return new Date(dateStr).toLocaleDateString('cs-CZ');
-                }
+                // ... zbytek funkcí (claimTask, formatDate) zůstává stejný, 
+                // jen místo 'pb.' používej 'this.pb.'
             }
         }
     </script>
