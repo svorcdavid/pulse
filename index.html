@@ -4,34 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pulse</title>
-    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300,0,0" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <style>
-        :root {
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --primary: #6366f1;
-            --text-main: #1e293b;
-            --text-dim: #64748b;
-            --border: #e2e8f0;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-        }
-
+        :root { --bg: #f8fafc; --card: #ffffff; --primary: #6366f1; --text-main: #1e293b; --text-dim: #64748b; --border: #e2e8f0; --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         [x-cloak] { display: none !important; }
 
         .login-card { background: var(--card); padding: 2rem; border-radius: 24px; box-shadow: var(--shadow); width: 100%; max-width: 360px; margin-top: 10vh; }
-        .app-container { width: 100%; max-width: 800px; padding: 1rem; }
+        .app-container { width: 100%; max-width: 800px; padding: 1rem; position: relative; }
 
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding: 1rem 0; }
-
-        /* Zmenšený switcher */
         .mode-switcher { background: #eef2ff; padding: 2px; border-radius: 10px; display: flex; gap: 2px; font-size: 0.75rem; }
-        .mode-btn { border: none; padding: 4px 10px; border-radius: 8px; cursor: pointer; font-weight: 500; transition: 0.2s; background: transparent; color: var(--text-dim); }
+        .mode-btn { border: none; padding: 4px 10px; border-radius: 8px; cursor: pointer; font-weight: 500; background: transparent; color: var(--text-dim); }
         .mode-btn.active { background: var(--card); color: var(--primary); box-shadow: var(--shadow); }
 
         .quick-add { background: var(--card); padding: 0.5rem; border-radius: 16px; display: flex; gap: 10px; box-shadow: var(--shadow); margin-bottom: 2rem; border: 1px solid var(--border); }
@@ -39,70 +26,70 @@
 
         .task-list { display: flex; flex-direction: column; gap: 12px; }
         .task-item { background: var(--card); padding: 1rem; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        
+        /* Ikony bez pozadí */
+        .icon-btn { background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; display: flex; align-items: center; transition: 0.2s; }
+        .icon-btn:hover { color: var(--primary); }
+        .icon-btn.active { color: var(--primary); font-variation-settings: 'FILL' 1; }
 
-        .task-controls { display: flex; align-items: center; gap: 12px; }
-
-        /* Checkbox vpravo */
         .check-btn { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: grid; place-items: center; transition: 0.2s; }
         .check-btn:hover { border-color: #22c55e; color: #22c55e; }
 
-        .btn-claim { background: transparent; border: 1px solid var(--border); border-radius: 10px; padding: 6px; cursor: pointer; display: flex; color: var(--text-dim); transition: 0.2s; }
-        .btn-claim.active { background: #eef2ff; border-color: var(--primary); color: var(--primary); }
+        .icon { font-family: 'Material Symbols Rounded'; font-size: 24px; }
 
-        .icon { font-family: 'Material Symbols Rounded'; font-size: 20px; vertical-align: middle; }
-        
-        /* Master Table */
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.2); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .modal { background: var(--card); padding: 2rem; border-radius: 24px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        .modal input, .modal select, .modal textarea { width: 100%; padding: 10px; margin: 8px 0 16px 0; border-radius: 10px; border: 1px solid var(--border); font-family: inherit; }
+
         .master-table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
-        .master-table th, .master-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        .master-table td, .master-table th { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
     </style>
 </head>
 <body x-data="pulseApp()" x-init="initPB()">
 
     <template x-if="!user">
         <div class="login-card">
-            <h2 style="margin-top:0">Pulse Login</h2>
-            <input type="text" x-model="pbUrl" placeholder="https://tvou-vps.cz" style="width:100%; padding:12px; margin: 8px 0; border-radius:8px; border:1px solid var(--border)">
-            <input type="email" x-model="email" placeholder="Email" style="width:100%; padding:12px; margin: 8px 0; border-radius:8px; border:1px solid var(--border)">
-            <input type="password" x-model="pass" placeholder="Heslo" style="width:100%; padding:12px; margin: 8px 0; border-radius:8px; border:1px solid var(--border)">
-            <button @click="login()" style="width:100%; padding:14px; margin-top:10px; border-radius:12px; border:none; background:var(--primary); color:white; font-weight:600; cursor:pointer">Vstoupit</button>
-            <p x-show="errorMessage" x-text="errorMessage" style="color: #ef4444; font-size: 0.8rem; margin-top: 10px; text-align: center"></p>
+            <h2>Pulse Login</h2>
+            <input type="text" x-model="pbUrl" placeholder="https://tvou-vps.cz">
+            <input type="email" x-model="email" placeholder="Email">
+            <input type="password" x-model="pass" placeholder="Heslo">
+            <button @click="login()" style="width:100%; padding:14px; border-radius:12px; border:none; background:var(--primary); color:white; font-weight:600; cursor:pointer">Vstoupit</button>
         </div>
     </template>
 
     <template x-if="user">
         <div class="app-container" x-cloak>
             <header>
-                <div style="font-weight: 800; letter-spacing: -1px; font-size: 1.5rem; color: var(--primary)">PULSE</div>
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="font-weight: 800; font-size: 1.5rem; color: var(--primary)">PULSE</div>
+                <div style="display: flex; gap: 12px;">
                     <div class="mode-switcher">
                         <button class="mode-btn" :class="mode === 'core' && 'active'" @click="mode = 'core'">Core</button>
                         <button class="mode-btn" :class="mode === 'master' && 'active'" @click="mode = 'master'">Master</button>
                     </div>
-                    <button @click="logout()" style="background:none; border:none; cursor:pointer; color:var(--text-dim)">
-                        <span class="icon">logout</span>
-                    </button>
+                    <button @click="logout()" class="icon-btn"><span class="icon">logout</span></button>
                 </div>
             </header>
 
             <div class="quick-add">
-                <span class="icon" style="padding: 12px; color: var(--text-dim)">add_circle</span>
-                <input type="text" x-model="newTaskTitle" @keyup.enter="addTask()" placeholder="Rychle něco přidej...">
+                <input type="text" x-model="newTaskTitle" @keyup.enter="addTask()" placeholder="Napiš úkol a dej Enter...">
             </div>
 
             <div x-show="mode === 'core'" class="task-list">
                 <template x-for="task in tasks.filter(t => !t.expand?.status?.is_closed)" :key="task.id">
                     <div class="task-item">
-                        <div style="flex:1">
+                        <div style="flex:1; cursor:pointer" @click="openEdit(task)">
                             <div x-text="task.title" style="font-weight:500"></div>
-                            <div x-show="task.due_date" x-text="formatDate(task.due_date)" style="font-size:0.75rem; color:var(--text-dim)"></div>
-                        </div>
-                        <div class="task-controls">
-                            <button class="btn-claim" @click="claimTask(task)" :class="task.assignee.includes(user.id) && 'active'">
-                                <span class="icon" x-text="task.assignee.includes(user.id) ? 'person_check' : 'person_add'"></span>
-                            </button>
-                            <div class="check-btn" @click="completeTask(task)">
-                                <span class="icon" style="font-size:16px">check</span>
+                            <div style="font-size:0.7rem; color:var(--text-dim)">
+                                <span x-show="task.expand?.parent_task" x-text="'↳ ' + task.expand.parent_task.title + ' • '"></span>
+                                <span x-text="task.due_date ? formatDate(task.due_date) : 'Bez termínu'"></span>
                             </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="icon-btn" @click="claimTask(task)" :class="task.assignee.includes(user.id) && 'active'">
+                                <span class="icon">person_check</span>
+                            </button>
+                            <div class="check-btn" @click="completeTask(task)"><span class="icon" style="font-size:18px">check</span></div>
                         </div>
                     </div>
                 </template>
@@ -110,124 +97,104 @@
 
             <div x-show="mode === 'master'">
                 <table class="master-table">
-                    <thead>
-                        <tr style="color: var(--text-dim); font-size: 0.8rem">
-                            <th>Úkol</th>
-                            <th>Kdo</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
+                    <thead><tr style="color:var(--text-dim)"><th>Úkol</th><th>Kdo</th><th>Status</th></tr></thead>
                     <tbody>
                         <template x-for="task in tasks" :key="task.id">
                             <tr :style="task.expand?.status?.is_closed ? 'opacity: 0.5' : ''">
-                                <td x-text="task.title" style="font-weight:500"></td>
-                                <td style="font-size: 0.8rem; color: var(--text-dim)" x-text="task.assignee.length > 0 ? 'Přiřazeno' : '-'"></td>
-                                <td>
-                                    <span :style="'color:' + (task.expand?.status?.color || '#000')" x-text="task.expand?.status?.title"></span>
+                                <td @click="openEdit(task)" style="cursor:pointer">
+                                    <div x-text="task.title" style="font-weight:500"></div>
+                                    <div x-show="task.expand?.parent_task" style="font-size:0.7rem; color:var(--text-dim)" x-text="'Projekt: ' + task.expand.parent_task.title"></div>
                                 </td>
+                                <td style="font-size:0.8rem">
+                                    <template x-for="u in task.expand?.assignee" :key="u.id">
+                                        <span x-text="u.name || u.email" style="display:block"></span>
+                                    </template>
+                                </td>
+                                <td :style="'color:' + (task.expand?.status?.color || 'inherit')" x-text="task.expand?.status?.title"></td>
                             </tr>
                         </template>
                     </tbody>
                 </table>
             </div>
+
+            <template x-if="editingTask">
+                <div class="modal-overlay" @click.self="editingTask = null">
+                    <div class="modal">
+                        <h3 style="margin-top:0">Upravit úkol</h3>
+                        <label style="font-size:0.8rem">Název</label>
+                        <input type="text" x-model="editingTask.title">
+                        
+                        <label style="font-size:0.8rem">Nadřazený úkol / Projekt</label>
+                        <select x-model="editingTask.parent_task">
+                            <option value="">-- Žádný --</option>
+                            <template x-for="t in tasks.filter(t => t.id !== editingTask.id)" :key="t.id">
+                                <option :value="t.id" x-text="t.title"></option>
+                            </template>
+                        </select>
+
+                        <label style="font-size:0.8rem">Termín</label>
+                        <input type="datetime-local" x-model="editingTask.due_date">
+
+                        <div style="display:flex; gap:10px; margin-top:10px">
+                            <button @click="saveEdit()" style="flex:1; padding:12px; background:var(--primary); color:white; border:none; border-radius:12px; cursor:pointer; font-weight:600">Uložit</button>
+                            <button @click="editingTask = null" style="flex:1; padding:12px; background:#f1f5f9; border:none; border-radius:12px; cursor:pointer">Zavřít</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
     </template>
 
     <script>
         function pulseApp() {
             return {
-                user: null,
-                pbUrl: localStorage.getItem('pulse_pb_url') || '',
-                email: '',
-                pass: '',
-                mode: 'core',
-                tasks: [],
-                newTaskTitle: '',
-                errorMessage: '',
-                pb: null,
+                user: null, pb: null, pbUrl: localStorage.getItem('pulse_pb_url') || '',
+                email: '', pass: '', mode: 'core', tasks: [], newTaskTitle: '', editingTask: null,
 
                 async initPB() {
                     if (this.pbUrl) {
                         this.pb = new PocketBase(this.pbUrl);
-                        if (this.pb.authStore.model) {
-                            this.user = this.pb.authStore.model;
-                            this.loadTasks();
-                        }
+                        if (this.pb.authStore.model) { this.user = this.pb.authStore.model; this.loadTasks(); }
                     }
                 },
-
                 async login() {
-                    try {
-                        this.errorMessage = '';
-                        this.pb = new PocketBase(this.pbUrl);
-                        await this.pb.collection('users').authWithPassword(this.email, this.pass);
-                        localStorage.setItem('pulse_pb_url', this.pbUrl);
-                        this.user = this.pb.authStore.model;
-                        this.loadTasks();
-                    } catch (err) {
-                        this.errorMessage = 'Chyba: ' + err.message;
-                    }
+                    this.pb = new PocketBase(this.pbUrl);
+                    await this.pb.collection('users').authWithPassword(this.email, this.pass);
+                    localStorage.setItem('pulse_pb_url', this.pbUrl);
+                    this.user = this.pb.authStore.model; this.loadTasks();
                 },
-
-                logout() {
-                    this.pb.authStore.clear();
-                    this.user = null;
-                },
+                logout() { this.pb.authStore.clear(); this.user = null; },
 
                 async loadTasks() {
-                    try {
-                        this.tasks = await this.pb.collection('pulse_tasks').getFullList({
-                            sort: '-created',
-                            expand: 'status,priority,tags'
-                        });
-                    } catch (err) {
-                        console.error("Chyba při načítání:", err);
-                    }
+                    this.tasks = await this.pb.collection('pulse_tasks').getFullList({
+                        sort: '-created', expand: 'status,parent_task,assignee'
+                    });
                 },
-
                 async addTask() {
                     if (!this.newTaskTitle) return;
-                    try {
-                        await this.pb.collection('pulse_tasks').create({
-                            title: this.newTaskTitle,
-                            assignee: [this.user.id]
-                        });
-                        this.newTaskTitle = '';
-                        this.loadTasks();
-                    } catch (err) {
-                        alert("Nepodařilo se přidat úkol.");
-                    }
+                    await this.pb.collection('pulse_tasks').create({ title: this.newTaskTitle, assignee: [this.user.id] });
+                    this.newTaskTitle = ''; this.loadTasks();
                 },
-
                 async completeTask(task) {
-                    try {
-                        const statuses = await this.pb.collection('pulse_statuses').getFullList();
-                        const doneStatus = statuses.find(s => s.is_closed === true);
-                        if (doneStatus) {
-                            await this.pb.collection('pulse_tasks').update(task.id, { status: doneStatus.id });
-                            this.loadTasks();
-                        } else {
-                            alert("Vytvoř v PocketBase status s is_closed = true!");
-                        }
-                    } catch (err) { console.error(err); }
+                    const res = await this.pb.collection('pulse_statuses').getFullList();
+                    const done = res.find(s => s.is_closed);
+                    if (done) { await this.pb.collection('pulse_tasks').update(task.id, { status: done.id }); this.loadTasks(); }
                 },
-
                 async claimTask(task) {
-                    try {
-                        let newAssignees = [...task.assignee];
-                        if (newAssignees.includes(this.user.id)) {
-                            newAssignees = newAssignees.filter(id => id !== this.user.id);
-                        } else {
-                            newAssignees.push(this.user.id);
-                        }
-                        await this.pb.collection('pulse_tasks').update(task.id, { assignee: newAssignees });
-                        this.loadTasks();
-                    } catch (err) { console.error(err); }
+                    let ids = [...task.assignee];
+                    ids = ids.includes(this.user.id) ? ids.filter(i => i !== this.user.id) : [...ids, this.user.id];
+                    await this.pb.collection('pulse_tasks').update(task.id, { assignee: ids });
+                    this.loadTasks();
                 },
-
-                formatDate(dateStr) {
-                    return new Date(dateStr).toLocaleDateString('cs-CZ');
-                }
+                openEdit(task) {
+                    this.editingTask = { ...task, due_date: task.due_date ? task.due_date.substring(0, 16) : '' };
+                },
+                async saveEdit() {
+                    const { id, title, parent_task, due_date } = this.editingTask;
+                    await this.pb.collection('pulse_tasks').update(id, { title, parent_task, due_date: due_date || null });
+                    this.editingTask = null; this.loadTasks();
+                },
+                formatDate(d) { return new Date(d).toLocaleDateString('cs-CZ', {day:'numeric', month:'short'}); }
             }
         }
     </script>
