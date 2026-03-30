@@ -41,24 +41,20 @@
 
         .icon { font-family: 'Material Symbols Rounded'; font-size: 24px; }
 
-        /* Avatary */
         .avatar-stack { display: flex; align-items: center; flex-direction: row-reverse; justify-content: flex-end; }
         .avatar { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--card); object-fit: cover; margin-left: -10px; background: #eee; }
         .avatar:last-child { margin-left: 0; }
 
-        /* Modal */
         .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
         .modal { background: var(--card); padding: 1.5rem; border-radius: 8px; width: 100%; max-width: 550px; max-height: 95vh; overflow-y: auto; }
         .modal label { display: block; margin-top: 12px; font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
         .modal input, .modal select, .modal textarea { width: 100%; padding: 10px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; outline: none; font-size: 0.95rem; }
         .modal textarea { min-height: 80px; resize: vertical; }
 
-        /* Tlačítka pro datum */
         .date-presets { display: flex; gap: 5px; margin-top: 5px; }
         .btn-date { flex: 1; padding: 9px; border: 1px solid var(--border); background: white; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600; color: var(--text-dim); }
         .btn-date:hover { background: #f1f5f9; color: var(--primary); }
 
-        /* Stromové zobrazení */
         .tree-node { margin-bottom: 4px; transition: 0.2s; }
         .tree-card { padding: 6px 12px; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; border: 1px solid transparent; }
         .tree-card:hover { background: #f1f5f9; border-color: var(--border); }
@@ -111,6 +107,9 @@
                                 </template>
                                 <span x-text="task.title" style="font-weight:600"></span>
                             </div>
+                            <div style="font-size:0.7rem; color:var(--text-dim); margin-top:3px;">
+                                <span x-text="task.due_date ? formatDate(task.due_date) : 'Bez termínu'"></span>
+                            </div>
                         </div>
                         <div style="display: flex; gap: 12px; align-items: center;">
                             <div class="avatar-stack">
@@ -131,7 +130,6 @@
                 <div class="card" style="padding: 1.5rem;">
                     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem">
                         <h3 style="margin:0">Strom projektů a úkolů</h3>
-                        <span x-show="onlyMine" style="font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px;">Filtr: Jen moje</span>
                     </div>
                     <div class="tree-container">
                         <div x-html="renderTree()"></div>
@@ -195,13 +193,6 @@
                                         <option :value="t.id" x-text="t.title"></option>
                                     </template>
                                 </select>
-
-                                <label>Tagy</label>
-                                <select x-model="editingTask.tags" multiple style="height: 60px;">
-                                    <template x-for="tag in allTags" :key="tag.id">
-                                        <option :value="tag.id" x-text="tag.title"></option>
-                                    </template>
-                                </select>
                             </div>
                         </template>
 
@@ -217,12 +208,10 @@
 
     <script>
         function pulseApp() {
-            priorities: [],
             return {
                 user: null, pb: null, pbUrl: localStorage.getItem('pulse_pb_url') || '',
-                email: '', pass: '', mode: 'core', tasks: [], availableUsers: [], statuses: [], allTags: [],
-                newTaskTitle: '', editingTask: null, 
-                onlyMine: false, // Stav pro přepínač "Jen moje"
+                email: '', pass: '', mode: 'core', tasks: [], availableUsers: [], statuses: [], priorities: [], allTags: [],
+                newTaskTitle: '', editingTask: null, onlyMine: false,
 
                 async initPB() {
                     window.pulse = this; 
@@ -247,7 +236,7 @@
                 },
                 logout() { 
                     if (this.pb) {
-                        this.pb.collection('pulse_tasks').unsubscribe(); // Zruší odběr
+                        this.pb.collection('pulse_tasks').unsubscribe();
                         this.pb.authStore.clear(); 
                     }
                     this.user = null; 
@@ -256,59 +245,43 @@
                 async loadData() {
                     if (!this.pb) return;
                     const [t, s, u, tags, p] = await Promise.all([
-                        // Přidán priority do expand
-                        this.pb.collection('pulse_tasks').getFullList({ 
-                            sort: '-created', 
-                            expand: 'status,parent_task,priority' 
-                        }),
+                        this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task,priority' }),
                         this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' }),
                         this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' }),
                         this.pb.collection('main_tags').getFullList().catch(() => []),
-                        // Načtení priorit seřazených podle levelu
                         this.pb.collection('pulse_priorities').getFullList({ sort: 'level' })
                     ]);
-                    this.tasks = t; 
-                    this.statuses = s; 
-                    this.availableUsers = u; 
-                    this.allTags = tags;
-                    this.priorities = p; // Uložení do stavu
+                    this.tasks = t; this.statuses = s; this.availableUsers = u; this.allTags = tags; this.priorities = p;
                 },
 
                 async subscribeToTasks() {
                     if (!this.pb) return;
-                    
-                    // Odebíráme změny ze všech úkolů (*)
-                    // Jakmile přijde změna (e), prostě znovu načteme data
-                    await this.pb.collection('pulse_tasks').subscribe('*', (e) => {
-                        console.log('Real-time update:', e.action, e.record.id);
-                        this.loadData();
-                    });
+                    await this.pb.collection('pulse_tasks').subscribe('*', (e) => { this.loadData(); });
                 },
 
-                // Getter pro filtrované úkoly v Core módu
                 get filteredTasks() {
                     return this.tasks
                         .filter(t => {
                             const notClosed = !t.expand?.status?.is_closed;
-                            if (this.onlyMine) {
-                                return notClosed && t.assignee.includes(this.user.id);
-                            }
-                            return notClosed;
+                            return this.onlyMine ? (notClosed && t.assignee.includes(this.user.id)) : notClosed;
                         })
                         .sort((a, b) => {
-                            // Seřadit podle priority level (pokud není, hodíme na konec - 99)
+                            // 1. Řazení podle data (nejbližší nahoře, bez data dole)
+                            const dateA = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+                            const dateB = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+                            
+                            if (dateA !== dateB) return dateA - dateB;
+
+                            // 2. Sekundární řazení podle priority level
                             const levelA = a.expand?.priority?.level ?? 99;
                             const levelB = b.expand?.priority?.level ?? 99;
                             return levelA - levelB;
                         });
                 },
 
-                // Získání URL avataru z PocketBase
                 getUserAvatar(userId) {
                     const u = this.availableUsers.find(x => x.id === userId);
-                    if (u && u.avatar) {
-                        return this.pb.files.getUrl(u, u.avatar, { thumb: '64x64' });
-                    }
+                    if (u && u.avatar) return this.pb.files.getUrl(u, u.avatar, { thumb: '64x64' });
                     return `https://ui-avatars.com/api/?name=${encodeURIComponent(u?.name || 'U')}&background=random`;
                 },
 
@@ -317,88 +290,60 @@
                     return u ? (u.name || u.email) : 'Neznámý';
                 },
 
-                // Nastavení rychlého data (0 = dnes, 1 = zítra)
                 setQuickDate(days) {
                     const d = new Date();
                     d.setDate(d.getDate() + days);
-                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); // Korekce pro local ISO
+                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
                     this.editingTask.due_date = d.toISOString().slice(0, 16);
                 },
 
                 renderTree() {
                     let html = '';
-                    // Ve stromu filtrujeme kořeny, ale musíme myslet na to, že chceme vidět i vnořené "moje"
                     const roots = this.tasks.filter(t => !t.parent_task);
                     roots.forEach(task => { 
                         const node = this.renderNode(task, 0);
                         if (node) html += node;
                     });
-                    return html || '<p style="color:var(--text-dim); text-align:center">Žádné úkoly k zobrazení.</p>';
+                    return html || '<p style="color:var(--text-dim); text-align:center">Žádné úkoly.</p>';
                 },
 
                 renderNode(task, depth) {
                     const children = this.tasks.filter(t => t.parent_task === task.id);
-                    
-                    // Pokud je zapnutý filtr "Jen moje", zobrazíme uzel jen pokud je přiřazen mě, nebo má nějaké "moje" děti
-                    if (this.onlyMine) {
-                        const isMine = task.assignee.includes(this.user.id);
-                        const hasMineChild = children.some(c => this.hasAssignedRecursive(c));
-                        if (!isMine && !hasMineChild) return '';
-                    }
+                    if (this.onlyMine && !task.assignee.includes(this.user.id) && !children.some(c => this.hasAssignedRecursive(c))) return '';
 
-                    const padding = depth * 24;
                     const isClosed = task.expand?.status?.is_closed;
-                    const statusColor = task.expand?.status?.color || 'var(--text-dim)';
-                    
-                    // Vygenerování avatarů pro strom
-                    const avatarsHtml = task.assignee.map(uid => 
-                        `<img src="${this.getUserAvatar(uid)}" class="avatar" style="width:20px; height:20px; margin-left:-6px" title="${this.getUserName(uid)}">`
-                    ).join('');
+                    const avatarsHtml = task.assignee.map(uid => `<img src="${this.getUserAvatar(uid)}" class="avatar" style="width:20px; height:20px; margin-left:-6px">`).join('');
 
                     let nodeHtml = `
-                        <div class="tree-node" style="padding-left: ${padding}px">
+                        <div class="tree-node" style="padding-left: ${depth * 24}px">
                             <div class="tree-card">
                                 <div style="flex:1; cursor:pointer; display:flex; align-items:center; gap:8px" onclick="window.pulse.openEditById('${task.id}')">
                                     <span class="icon" style="font-size:18px; color:var(--text-dim)">${children.length ? 'folder_open' : 'description'}</span>
-                                    <span style="font-weight:${depth === 0 ? '700' : '500'}; ${isClosed ? 'text-decoration:line-through; opacity:0.5' : ''}">${task.title}</span>
-                                    <span style="font-size:0.6rem; font-weight:800; color:${statusColor}; text-transform:uppercase; margin-left:4px">${task.expand?.status?.title || ''}</span>
+                                    <span style="${isClosed ? 'text-decoration:line-through; opacity:0.5' : ''}">${task.title}</span>
                                 </div>
                                 <div style="display:flex; gap:8px; align-items:center">
-                                    <div class="avatar-stack" style="margin-right:8px">${avatarsHtml}</div>
-                                    <button class="icon-btn" onclick="window.pulse.claimTaskById('${task.id}')" style="${task.assignee.includes(this.user?.id) ? 'color:var(--primary)' : ''}"><span class="icon" style="font-size:20px">person_check</span></button>
+                                    <div class="avatar-stack">${avatarsHtml}</div>
                                     <button class="icon-btn check-icon-btn" onclick="window.pulse.completeTaskById('${task.id}')"><span class="icon" style="font-size:20px">check_circle</span></button>
                                 </div>
                             </div>
                         </div>
                     `;
-
-                    children.forEach(child => { 
-                        const childHtml = this.renderNode(child, depth + 1);
-                        if (childHtml) nodeHtml += childHtml;
-                    });
+                    children.forEach(child => { nodeHtml += this.renderNode(child, depth + 1); });
                     return nodeHtml;
                 },
 
-                // Pomocná pro rekurzivní hledání mých úkolů ve stromu
                 hasAssignedRecursive(task) {
                     if (task.assignee.includes(this.user.id)) return true;
-                    const children = this.tasks.filter(t => t.parent_task === task.id);
-                    return children.some(c => this.hasAssignedRecursive(c));
+                    return this.tasks.filter(t => t.parent_task === task.id).some(c => this.hasAssignedRecursive(c));
                 },
 
                 openEditById(id) { const t = this.tasks.find(x => x.id === id); if (t) this.openEdit(t); },
-                claimTaskById(id) { const t = this.tasks.find(x => x.id === id); if (t) this.claimTask(t); },
                 completeTaskById(id) { const t = this.tasks.find(x => x.id === id); if (t) this.completeTask(t); },
 
                 async addTask() {
                     if (!this.newTaskTitle) return;
-                    await this.pb.collection('pulse_tasks').create({ 
-                        title: this.newTaskTitle, 
-                        assignee: [this.user.id],
-                        creator: this.user.id // <-- Přidáno tohle
-                    });
-                    this.newTaskTitle = ''; 
-                    await this.loadData();
+                    await this.pb.collection('pulse_tasks').create({ title: this.newTaskTitle, assignee: [this.user.id], creator: this.user.id });
+                    this.newTaskTitle = ''; await this.loadData();
                 },
                 async completeTask(task) {
                     const done = this.statuses.find(s => s.is_closed);
@@ -413,22 +358,11 @@
                     this.editingTask = { ...task, due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '' };
                 },
                 async saveEdit() {
-                    const { id, title, description, status, due_date, assignee, parent_task, tags, priority } = this.editingTask;
-                    const data = { 
-                        title, 
-                        description, 
-                        due_date: due_date || null, 
-                        assignee,
-                        priority: priority || null // Přidáno sem
-                    };
-                    if (this.mode === 'master') {
-                        data.status = status;
-                        data.parent_task = parent_task || null;
-                        data.tags = tags || [];
-                    }
+                    const { id, title, description, status, due_date, assignee, parent_task, priority } = this.editingTask;
+                    const data = { title, description, due_date: due_date || null, assignee, priority: priority || null };
+                    if (this.mode === 'master') { data.status = status; data.parent_task = parent_task || null; }
                     await this.pb.collection('pulse_tasks').update(id, data);
-                    this.editingTask = null; 
-                    await this.loadData();
+                    this.editingTask = null; await this.loadData();
                 },
                 formatDate(d) { return new Date(d).toLocaleDateString('cs-CZ', {day:'numeric', month:'short'}); }
             }
