@@ -364,8 +364,13 @@
 
                 async addTask() {
                     if (!this.newTaskTitle) return;
-                    await this.pb.collection('pulse_tasks').create({ title: this.newTaskTitle, assignee: [this.user.id] });
-                    this.newTaskTitle = ''; await this.loadData();
+                    await this.pb.collection('pulse_tasks').create({ 
+                        title: this.newTaskTitle, 
+                        assignee: [this.user.id],
+                        creator: this.user.id // <-- Přidáno tohle
+                    });
+                    this.newTaskTitle = ''; 
+                    await this.loadData();
                 },
                 async completeTask(task) {
                     const done = this.statuses.find(s => s.is_closed);
