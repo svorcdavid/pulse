@@ -104,10 +104,12 @@
                 <template x-for="task in filteredTasks" :key="task.id">
                     <div class="card task-item">
                         <div style="flex:1; cursor:pointer" @click="openEdit(task)">
-                            <div x-text="task.title" style="font-weight:600"></div>
-                            <div style="font-size:0.7rem; color:var(--text-dim); margin-top:3px; display: flex; align-items: center; gap: 6px;">
-                                <template x-if="task.expand?.parent_task"><span x-text="task.expand.parent_task.title + ' • '"></span></template>
-                                <span x-text="task.due_date ? formatDate(task.due_date) : 'Bez termínu'"></span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <template x-if="task.expand?.priority">
+                                    <span :style="'width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background:' + task.expand.priority.color" 
+                                        :title="task.expand.priority.title"></span>
+                                </template>
+                                <span x-text="task.title" style="font-weight:600"></span>
                             </div>
                         </div>
                         <div style="display: flex; gap: 12px; align-items: center;">
@@ -148,6 +150,14 @@
                         <label>Popis</label>
                         <textarea x-model="editingTask.description" placeholder="Podrobnosti..."></textarea>
 
+                        <label>Priorita</label>
+                        <select x-model="editingTask.priority">
+                            <option value="">-- Bez priority --</option>
+                            <template x-for="p in priorities" :key="p.id">
+                                <option :value="p.id" x-text="p.title" :selected="p.id == editingTask.priority"></option>
+                            </template>
+                        </select>
+                        
                         <div style="display: flex; gap: 10px; align-items: flex-start;">
                             <div style="flex:1">
                                 <label>Termín</label>
@@ -207,6 +217,7 @@
 
     <script>
         function pulseApp() {
+            priorities: [],
             return {
                 user: null, pb: null, pbUrl: localStorage.getItem('pulse_pb_url') || '',
                 email: '', pass: '', mode: 'core', tasks: [], availableUsers: [], statuses: [], allTags: [],
@@ -244,13 +255,23 @@
 
                 async loadData() {
                     if (!this.pb) return;
-                    const [t, s, u, tags] = await Promise.all([
-                        this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task' }),
+                    const [t, s, u, tags, p] = await Promise.all([
+                        // Přidán priority do expand
+                        this.pb.collection('pulse_tasks').getFullList({ 
+                            sort: '-created', 
+                            expand: 'status,parent_task,priority' 
+                        }),
                         this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' }),
                         this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' }),
-                        this.pb.collection('main_tags').getFullList().catch(() => []) 
+                        this.pb.collection('main_tags').getFullList().catch(() => []),
+                        // Načtení priorit seřazených podle levelu
+                        this.pb.collection('pulse_priorities').getFullList({ sort: 'level' })
                     ]);
-                    this.tasks = t; this.statuses = s; this.availableUsers = u; this.allTags = tags;
+                    this.tasks = t; 
+                    this.statuses = s; 
+                    this.availableUsers = u; 
+                    this.allTags = tags;
+                    this.priorities = p; // Uložení do stavu
                 },
 
                 async subscribeToTasks() {
@@ -266,13 +287,20 @@
 
                 // Getter pro filtrované úkoly v Core módu
                 get filteredTasks() {
-                    return this.tasks.filter(t => {
-                        const notClosed = !t.expand?.status?.is_closed;
-                        if (this.onlyMine) {
-                            return notClosed && t.assignee.includes(this.user.id);
-                        }
-                        return notClosed;
-                    });
+                    return this.tasks
+                        .filter(t => {
+                            const notClosed = !t.expand?.status?.is_closed;
+                            if (this.onlyMine) {
+                                return notClosed && t.assignee.includes(this.user.id);
+                            }
+                            return notClosed;
+                        })
+                        .sort((a, b) => {
+                            // Seřadit podle priority level (pokud není, hodíme na konec - 99)
+                            const levelA = a.expand?.priority?.level ?? 99;
+                            const levelB = b.expand?.priority?.level ?? 99;
+                            return levelA - levelB;
+                        });
                 },
 
                 // Získání URL avataru z PocketBase
@@ -385,15 +413,22 @@
                     this.editingTask = { ...task, due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '' };
                 },
                 async saveEdit() {
-                    const { id, title, description, status, due_date, assignee, parent_task, tags } = this.editingTask;
-                    const data = { title, description, due_date: due_date || null, assignee };
+                    const { id, title, description, status, due_date, assignee, parent_task, tags, priority } = this.editingTask;
+                    const data = { 
+                        title, 
+                        description, 
+                        due_date: due_date || null, 
+                        assignee,
+                        priority: priority || null // Přidáno sem
+                    };
                     if (this.mode === 'master') {
                         data.status = status;
                         data.parent_task = parent_task || null;
                         data.tags = tags || [];
                     }
                     await this.pb.collection('pulse_tasks').update(id, data);
-                    this.editingTask = null; await this.loadData();
+                    this.editingTask = null; 
+                    await this.loadData();
                 },
                 formatDate(d) { return new Date(d).toLocaleDateString('cs-CZ', {day:'numeric', month:'short'}); }
             }
