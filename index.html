@@ -200,10 +200,19 @@
     <script>
         function pulseApp() {
             return {
-                user: null, pb: null, pbUrl: localStorage.getItem('pulse_pb_url') || '',
-                email: '', pass: '', mode: 'core', tasks: [], availableUsers: [], 
-                statuses: [], priorities: [], 
-                newTaskTitle: '', editingTask: null, onlyMine: false,
+                user: null, 
+                pb: null, 
+                pbUrl: localStorage.getItem('pulse_pb_url') || '',
+                email: '', 
+                pass: '', 
+                mode: 'core', 
+                tasks: [], 
+                availableUsers: [], 
+                statuses: [], 
+                priorities: [], 
+                newTaskTitle: '', 
+                editingTask: null, 
+                onlyMine: false,
 
                 async initPB() {
                     window.pulse = this; 
@@ -218,6 +227,7 @@
                         } catch (e) { this.user = null; }
                     }
                 },
+
                 async login() {
                     this.pb = new PocketBase(this.pbUrl);
                     await this.pb.collection('users').authWithPassword(this.email, this.pass);
@@ -226,6 +236,7 @@
                     await this.loadData();
                     this.subscribeToTasks();
                 },
+
                 logout() { 
                     if (this.pb) {
                         this.pb.collection('pulse_tasks').unsubscribe();
@@ -233,20 +244,28 @@
                     }
                     this.user = null; 
                 },
+
                 async loadData() {
                     if (!this.pb) return;
-                    const [t, s, u, p] = await Promise.all([
-                        this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task,priority' }),
-                        this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' }),
-                        this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' }),
-                        this.pb.collection('pulse_priorities').getFullList({ sort: 'level' })
-                    ]);
-                    this.tasks = t; this.statuses = s; this.availableUsers = u; this.priorities = p;
+                    try {
+                        const [t, s, u, p] = await Promise.all([
+                            this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task,priority' }),
+                            this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' }),
+                            this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' }),
+                            this.pb.collection('pulse_priorities').getFullList({ sort: 'level' })
+                        ]);
+                        this.tasks = t; 
+                        this.statuses = s; 
+                        this.availableUsers = u; 
+                        this.priorities = p;
+                    } catch (e) { console.error("Chyba při načítání dat:", e); }
                 },
+
                 async subscribeToTasks() {
                     if (!this.pb) return;
-                    await this.pb.collection('pulse_tasks').subscribe('*', (e) => { this.loadData(); });
+                    await this.pb.collection('pulse_tasks').subscribe('*', () => this.loadData());
                 },
+
                 get filteredTasks() {
                     return this.tasks
                         .filter(t => {
@@ -265,21 +284,28 @@
                             return levelA - levelB;
                         });
                 },
+
                 getUserAvatar(userId) {
                     const u = this.availableUsers.find(x => x.id === userId);
-                    if (u && u.avatar) return this.pb.files.getUrl(u, u.avatar, { thumb: '64x64' });
+                    // POUŽITO .getURL() s velkým URL
+                    if (u && u.avatar) return this.pb.files.getURL(u, u.avatar, { thumb: '64x64' });
                     return `https://ui-avatars.com/api/?name=${encodeURIComponent(u?.name || 'U')}&background=random`;
                 },
+
                 getUserName(userId) {
                     const u = this.availableUsers.find(x => x.id === userId);
                     return u ? (u.name || u.email) : 'Neznámý';
                 },
+
                 setQuickDate(days) {
                     const d = new Date();
                     d.setDate(d.getDate() + days);
-                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-                    this.editingTask.due_date = d.toISOString().slice(0, 16);
+                    // Korekce na lokální čas pro input
+                    const tzOffset = d.getTimezoneOffset() * 60000;
+                    const localISOTime = (new Date(d - tzOffset)).toISOString().slice(0, 16);
+                    this.editingTask.due_date = localISOTime;
                 },
+
                 renderTree() {
                     let html = '';
                     const roots = this.tasks.filter(t => !t.parent_task);
@@ -289,6 +315,7 @@
                     });
                     return html || '<p style="color:var(--text-dim); text-align:center">Žádné úkoly.</p>';
                 },
+
                 renderNode(task, depth) {
                     const children = this.tasks.filter(t => t.parent_task === task.id);
                     if (this.onlyMine && !task.assignee.includes(this.user?.id) && !children.some(c => this.hasAssignedRecursive(c))) return '';
@@ -296,7 +323,7 @@
                     const isClosed = task.expand?.status?.is_closed;
                     const avatarsHtml = task.assignee.map(uid => `<img src="${this.getUserAvatar(uid)}" class="avatar" style="width:20px; height:20px; margin-left:-6px">`).join('');
 
-                    let nodeHtml = `
+                    return `
                         <div class="tree-node" style="padding-left: ${depth * 24}px">
                             <div class="tree-card">
                                 <div style="flex:1; cursor:pointer; display:flex; align-items:center; gap:8px" onclick="window.pulse.openEditById('${task.id}')">
@@ -309,34 +336,68 @@
                                 </div>
                             </div>
                         </div>
-                    `;
-                    children.forEach(child => { nodeHtml += this.renderNode(child, depth + 1); });
-                    return nodeHtml;
+                    ` + children.map(child => this.renderNode(child, depth + 1)).join('');
                 },
+
                 hasAssignedRecursive(task) {
                     if (task.assignee.includes(this.user?.id)) return true;
                     return this.tasks.filter(t => t.parent_task === task.id).some(c => this.hasAssignedRecursive(c));
                 },
+
                 openEditById(id) { const t = this.tasks.find(x => x.id === id); if (t) this.openEdit(t); },
                 completeTaskById(id) { const t = this.tasks.find(x => x.id === id); if (t) this.completeTask(t); },
+
                 async addTask() {
                     if (!this.newTaskTitle) return;
-                    await this.pb.collection('pulse_tasks').create({ title: this.newTaskTitle, assignee: [this.user.id], creator: this.user.id });
+                    await this.pb.collection('pulse_tasks').create({ 
+                        title: this.newTaskTitle, 
+                        assignee: [this.user.id], 
+                        creator: this.user.id 
+                    });
                     this.newTaskTitle = ''; await this.loadData();
                 },
+
                 async completeTask(task) {
                     const done = this.statuses.find(s => s.is_closed);
-                    if (done) { await this.pb.collection('pulse_tasks').update(task.id, { status: done.id }); await this.loadData(); }
+                    if (done) { 
+                        await this.pb.collection('pulse_tasks').update(task.id, { status: done.id }); 
+                        await this.loadData(); 
+                    }
                 },
+
+                async claimTask(task) {
+                    let ids = [...(task.assignee || [])];
+                    ids = ids.includes(this.user.id) ? ids.filter(i => i !== this.user.id) : [...ids, this.user.id];
+                    await this.pb.collection('pulse_tasks').update(task.id, { assignee: ids }); 
+                    await this.loadData();
+                },
+
                 openEdit(task) {
-                    this.editingTask = { ...task, due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '' };
+                    let localDate = '';
+                    if (task.due_date) {
+                        const d = new Date(task.due_date);
+                        const tzOffset = d.getTimezoneOffset() * 60000;
+                        localDate = (new Date(d - tzOffset)).toISOString().slice(0, 16);
+                    }
+                    this.editingTask = { ...task, due_date: localDate };
                 },
+
                 async saveEdit() {
                     const { id, title, description, status, due_date, assignee, parent_task, priority } = this.editingTask;
-                    const data = { title, description, due_date: due_date || null, assignee, priority: priority || null, status, parent_task: parent_task || null };
+                    const data = { 
+                        title, 
+                        description, 
+                        due_date: due_date ? new Date(due_date).toISOString() : null, 
+                        assignee, 
+                        priority: priority || null, 
+                        status, 
+                        parent_task: parent_task || null 
+                    };
                     await this.pb.collection('pulse_tasks').update(id, data);
-                    this.editingTask = null; await this.loadData();
+                    this.editingTask = null; 
+                    await this.loadData();
                 },
+
                 formatDate(d) { return new Date(d).toLocaleDateString('cs-CZ', {day:'numeric', month:'short'}); }
             }
         }
