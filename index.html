@@ -78,12 +78,11 @@
             <div x-show="mode === 'core'" class="task-list">
                 <template x-for="task in tasks.filter(t => !t.expand?.status?.is_closed)" :key="task.id">
                     <div class="task-item">
-                        <div style="flex:1; cursor:pointer" @click="openEdit(task)">
-                            <div x-text="task.title" style="font-weight:500"></div>
-                            <div style="font-size:0.7rem; color:var(--text-dim)">
-                                <span x-show="task.expand?.parent_task" x-text="'↳ ' + task.expand.parent_task.title + ' • '"></span>
-                                <span x-text="task.due_date ? formatDate(task.due_date) : 'Bez termínu'"></span>
-                            </div>
+                        <div style="font-size:0.7rem; color:var(--text-dim)">
+                            <template x-if="task.expand?.parent_task">
+                                <span x-text="'↳ ' + task.expand.parent_task.title + ' • '"></span>
+                            </template>
+                            <span x-text="task.due_date ? formatDate(task.due_date) : 'Bez termínu'"></span>
                         </div>
                         <div style="display: flex; gap: 8px;">
                             <button class="icon-btn" @click="claimTask(task)" :class="task.assignee.includes(user.id) && 'active'">
@@ -103,7 +102,10 @@
                             <tr :style="task.expand?.status?.is_closed ? 'opacity: 0.5' : ''">
                                 <td @click="openEdit(task)" style="cursor:pointer">
                                     <div x-text="task.title" style="font-weight:500"></div>
-                                    <div x-show="task.expand?.parent_task" style="font-size:0.7rem; color:var(--text-dim)" x-text="'Projekt: ' + task.expand.parent_task.title"></div>
+                                    <template x-if="task.expand?.parent_task">
+                                        <div style="font-size:0.7rem; color:var(--text-dim)" 
+                                            x-text="'Projekt: ' + task.expand.parent_task.title"></div>
+                                    </template>
                                 </td>
                                 <td style="font-size:0.8rem">
                                     <template x-for="u in task.expand?.assignee" :key="u.id">
@@ -190,10 +192,19 @@
                     this.editingTask = { ...task, due_date: task.due_date ? task.due_date.substring(0, 16) : '' };
                 },
                 async saveEdit() {
-                    const { id, title, parent_task, due_date } = this.editingTask;
-                    await this.pb.collection('pulse_tasks').update(id, { title, parent_task, due_date: due_date || null });
-                    this.editingTask = null; this.loadTasks();
-                },
+                    try {
+                        const { id, title, parent_task, due_date } = this.editingTask;
+                        await this.pb.collection('pulse_tasks').update(id, { 
+                            title: title, 
+                            parent_task: parent_task || "", // Pokud je null/undefined, pošli prázdný string
+                            due_date: due_date || null 
+                        });
+                        this.editingTask = null; 
+                        this.loadTasks(); 
+                    } catch (err) {
+                        console.error("Chyba při ukládání:", err);
+                    }
+                }
                 formatDate(d) { return new Date(d).toLocaleDateString('cs-CZ', {day:'numeric', month:'short'}); }
             }
         }
