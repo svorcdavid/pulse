@@ -20,40 +20,28 @@
 
         .app-container { width: 100%; max-width: 800px; margin: 0 auto; padding: 1rem; }
         header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; margin-bottom: 1rem; }
-        
         .card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); }
-
         .mode-switcher { background: #e2e8f0; padding: 3px; border-radius: 10px; display: flex; gap: 2px; }
         .mode-btn { border: none; padding: 6px 14px; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: transparent; color: var(--text-dim); }
         .mode-btn.active { background: var(--card); color: var(--primary); box-shadow: var(--shadow); }
-
         .quick-add { display: flex; gap: 10px; padding: 0.5rem; margin-bottom: 1.5rem; align-items: center; }
         .quick-add input { border: none; flex: 1; padding: 10px; font-size: 1rem; outline: none; background: transparent; width: 100%; }
-
         .task-list { display: flex; flex-direction: column; gap: 8px; }
         .task-item { padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        
         .icon-btn { background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 5px; display: flex; align-items: center; transition: 0.2s; }
         .icon-btn:hover { color: var(--primary); }
         .icon-btn.active { color: var(--primary); font-variation-settings: 'FILL' 1; }
-
-        /* Ikonický checkbox */
         .check-icon-btn { color: #cbd5e1; transition: 0.2s; }
         .check-icon-btn:hover { color: #22c55e; transform: scale(1.1); }
-
         .icon { font-family: 'Material Symbols Rounded'; font-size: 24px; }
-
-        /* Modal */
         .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
         .modal { background: var(--card); padding: 1.5rem; border-radius: 12px; width: 100%; max-width: 550px; max-height: 95vh; overflow-y: auto; }
         .modal label { display: block; margin-top: 12px; font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
         .modal input, .modal select, .modal textarea { width: 100%; padding: 10px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; outline: none; font-size: 0.95rem; }
         .modal textarea { min-height: 80px; resize: vertical; }
-
         .master-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         .master-table th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 1px solid var(--border); font-size: 0.75rem; }
         .master-table td { padding: 12px; border-bottom: 1px solid var(--border); }
-        
         .child-task-row { border-top: 1px solid #f1f5f9; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
@@ -61,12 +49,13 @@
 
     <template x-if="!user">
         <div class="app-container" style="display: flex; justify-content: center; padding-top: 10vh;">
-            <div class="card" style="padding: 2rem; width: 100%; max-width: 380px;">
+            <div class="card" style="padding: 2rem; width: 100%; max-width: 380px;" x-cloak>
                 <h2 style="margin: 0 0 1.5rem 0;">Pulse</h2>
-                <input type="text" x-model="pbUrl" placeholder="URL PocketBase">
-                <input type="email" x-model="email" placeholder="Email">
-                <input type="password" x-model="pass" placeholder="Heslo">
+                <input type="text" x-model="pbUrl" placeholder="URL PocketBase" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid var(--border)">
+                <input type="email" x-model="email" placeholder="Email" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid var(--border)">
+                <input type="password" x-model="pass" placeholder="Heslo" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid var(--border)">
                 <button @click="login()" style="width:100%; padding:12px; border-radius:8px; border:none; background:var(--primary); color:white; font-weight:600; cursor:pointer">Vstoupit</button>
+                <p x-show="errorMessage" x-text="errorMessage" style="color:red; font-size:0.8rem; margin-top:10px"></p>
             </div>
         </div>
     </template>
@@ -110,7 +99,7 @@
             <div x-show="mode === 'master'">
                 <div class="card" style="overflow: hidden;">
                     <table class="master-table">
-                        <thead><tr><th>Top-level Projekt</th><th>Lidé</th><th>Status</th></tr></thead>
+                        <thead><tr><th>Projekt</th><th>Lidé</th><th>Status</th></tr></thead>
                         <tbody>
                             <template x-for="task in tasks.filter(t => !t.parent_task)" :key="task.id">
                                 <tr @click="openEdit(task)" style="cursor:pointer">
@@ -133,7 +122,7 @@
                         <input type="text" x-model="editingTask.title">
 
                         <label>Popis</label>
-                        <textarea x-model="editingTask.description" placeholder="Podrobnosti..."></textarea>
+                        <textarea x-model="editingTask.description"></textarea>
 
                         <div style="display: flex; gap: 10px;">
                             <div style="flex:1">
@@ -152,7 +141,7 @@
                             </template>
                         </div>
 
-                        <label>Přiřazení lidé</label>
+                        <label>Přiřazení</label>
                         <select x-model="editingTask.assignee" multiple style="height: 60px;">
                             <template x-for="u in availableUsers" :key="u.id">
                                 <option :value="u.id" x-text="u.name || u.email"></option>
@@ -166,12 +155,8 @@
                                     <option value="">-- Žádný --</option>
                                     <template x-for="t in tasks.filter(t => t.id !== editingTask.id)" :key="t.id">
                                         <option :value="t.id" x-text="t.title"></option>
-                                    </select>
+                                    </template>
                                 </select>
-
-                                <label>Tagy (oddělené čárkou)</label>
-                                <input type="text" placeholder="nákup, práce..." x-model="editingTask.tempTags">
-
                                 <template x-if="!editingTask.parent_task">
                                     <div style="margin-top:15px">
                                         <label>Podúkoly</label>
@@ -204,31 +189,59 @@
     <script>
         function pulseApp() {
             return {
-                user: null, pb: null, pbUrl: localStorage.getItem('pulse_pb_url') || '',
-                email: '', pass: '', mode: 'core', tasks: [], availableUsers: [], statuses: [],
-                newTaskTitle: '', editingTask: null,
+                user: null, // Musí být hned tady
+                pb: null,
+                pbUrl: localStorage.getItem('pulse_pb_url') || '',
+                email: '',
+                pass: '',
+                mode: 'core',
+                tasks: [],
+                availableUsers: [],
+                statuses: [],
+                newTaskTitle: '',
+                editingTask: null,
+                errorMessage: '',
 
                 async initPB() {
                     if (this.pbUrl) {
                         try {
                             this.pb = new PocketBase(this.pbUrl);
-                            if (this.pb.authStore.isValid) { this.user = this.pb.authStore.model; await this.loadData(); }
-                        } catch (e) {}
+                            if (this.pb.authStore.isValid) {
+                                this.user = this.pb.authStore.model;
+                                await this.loadData();
+                            }
+                        } catch (e) { this.user = null; }
                     }
                 },
+
                 async login() {
-                    this.pb = new PocketBase(this.pbUrl);
-                    await this.pb.collection('users').authWithPassword(this.email, this.pass);
-                    localStorage.setItem('pulse_pb_url', this.pbUrl);
-                    this.user = this.pb.authStore.model; await this.loadData();
+                    try {
+                        this.errorMessage = '';
+                        this.pb = new PocketBase(this.pbUrl);
+                        const authData = await this.pb.collection('users').authWithPassword(this.email, this.pass);
+                        localStorage.setItem('pulse_pb_url', this.pbUrl);
+                        this.user = authData.record || this.pb.authStore.model;
+                        await this.loadData();
+                    } catch (err) {
+                        this.errorMessage = 'Chyba: ' + err.message;
+                    }
                 },
-                logout() { this.pb.authStore.clear(); this.user = null; },
+
+                logout() {
+                    if (this.pb) this.pb.authStore.clear();
+                    this.user = null;
+                },
 
                 async loadData() {
                     if (!this.pb) return;
-                    this.tasks = await this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task' });
-                    this.availableUsers = await this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' });
-                    this.statuses = await this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' });
+                    try {
+                        const [t, u, s] = await Promise.all([
+                            this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task' }),
+                            this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' }),
+                            this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' })
+                        ]);
+                        this.tasks = t; this.availableUsers = u; this.statuses = s;
+                    } catch (e) { console.error(e); }
                 },
 
                 async addTask() {
@@ -236,33 +249,41 @@
                     await this.pb.collection('pulse_tasks').create({ title: this.newTaskTitle, assignee: [this.user.id] });
                     this.newTaskTitle = ''; await this.loadData();
                 },
+
                 async completeTask(task) {
                     const done = this.statuses.find(s => s.is_closed);
-                    if (done) { await this.pb.collection('pulse_tasks').update(task.id, { status: done.id }); await this.loadData(); }
+                    if (done) { 
+                        await this.pb.collection('pulse_tasks').update(task.id, { status: done.id }); 
+                        await this.loadData(); 
+                    }
                 },
+
                 async claimTask(task) {
                     let ids = [...(task.assignee || [])];
                     ids = ids.includes(this.user.id) ? ids.filter(i => i !== this.user.id) : [...ids, this.user.id];
-                    await this.pb.collection('pulse_tasks').update(task.id, { assignee: ids }); await this.loadData();
+                    await this.pb.collection('pulse_tasks').update(task.id, { assignee: ids });
+                    await this.loadData();
                 },
+
                 openEdit(task) {
                     this.editingTask = { 
                         ...task, 
-                        due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '',
-                        tempTags: '' // Tady by se v budoucnu mapovaly tagy z DB
+                        due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '' 
                     };
                 },
+
                 async saveEdit() {
                     const { id, title, description, status, due_date, assignee, parent_task } = this.editingTask;
                     const updateData = { title, description, due_date: due_date || null, assignee };
-                    // Status a Parent posíláme jen pokud je v Master módu (nebo pokud chceme aby se v Core neměnily)
                     if (this.mode === 'master') {
                         updateData.status = status;
                         updateData.parent_task = parent_task || null;
                     }
                     await this.pb.collection('pulse_tasks').update(id, updateData);
-                    this.editingTask = null; await this.loadData();
+                    this.editingTask = null;
+                    await this.loadData();
                 },
+
                 formatDate(d) { return new Date(d).toLocaleDateString('cs-CZ', {day:'numeric', month:'short'}); }
             }
         }
