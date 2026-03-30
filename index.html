@@ -221,6 +221,7 @@
                             if (this.pb.authStore.isValid) {
                                 this.user = this.pb.authStore.model;
                                 await this.loadData();
+                                this.subscribeToTasks();
                             }
                         } catch (e) { this.user = null; }
                     }
@@ -231,8 +232,15 @@
                     localStorage.setItem('pulse_pb_url', this.pbUrl);
                     this.user = this.pb.authStore.model; 
                     await this.loadData();
+                    this.subscribeToTasks();
                 },
-                logout() { if (this.pb) this.pb.authStore.clear(); this.user = null; },
+                logout() { 
+                    if (this.pb) {
+                        this.pb.collection('pulse_tasks').unsubscribe(); // Zruší odběr
+                        this.pb.authStore.clear(); 
+                    }
+                    this.user = null; 
+                },
 
                 async loadData() {
                     if (!this.pb) return;
@@ -243,6 +251,17 @@
                         this.pb.collection('main_tags').getFullList().catch(() => []) 
                     ]);
                     this.tasks = t; this.statuses = s; this.availableUsers = u; this.allTags = tags;
+                },
+
+                async subscribeToTasks() {
+                    if (!this.pb) return;
+                    
+                    // Odebíráme změny ze všech úkolů (*)
+                    // Jakmile přijde změna (e), prostě znovu načteme data
+                    await this.pb.collection('pulse_tasks').subscribe('*', (e) => {
+                        console.log('Real-time update:', e.action, e.record.id);
+                        this.loadData();
+                    });
                 },
 
                 // Getter pro filtrované úkoly v Core módu
