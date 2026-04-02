@@ -145,7 +145,7 @@
                         <label>Název</label>
                         <input type="text" x-model="editingTask.title">
 
-                        <template x-if="mode === 'master'">
+                        <div x-show="mode === 'master'">
                             <label>Popis</label>
                             <textarea x-model="editingTask.description" placeholder="Podrobnosti..."></textarea>
 
@@ -168,7 +168,7 @@
                                     </select>
                                 </div>
                             </div>
-                        </template>
+                        </div>
 
                         <label>Termín</label>
                         <input type="datetime-local" x-model="editingTask.due_date">
