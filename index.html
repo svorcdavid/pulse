@@ -106,6 +106,9 @@
                                 <template x-if="task.expand?.priority">
                                     <span :style="'width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background:' + task.expand.priority.color"></span>
                                 </template>
+                                <template x-if="!task.expand?.priority">
+                                    <span style="display: inline-block; width: 10px; height: 10px;"></span>
+                                </template>
                                 <span x-text="task.title" style="font-weight:600"></span>
                             </div>
                             <div style="font-size:0.7rem; color:var(--text-dim); margin-top:3px; display: flex; align-items: center; gap: 6px;">
@@ -120,7 +123,6 @@
                                 </template>
                             </div>
                             <div style="display: flex; gap: 4px; align-items: center; border-left: 1px solid var(--border); padding-left: 8px;">
-                                <button class="icon-btn" @click="claimTask(task)" :class="task.assignee.includes(user.id) && 'active'"><span class="icon">person_check</span></button>
                                 <button class="icon-btn check-icon-btn" @click="completeTask(task)"><span class="icon">check_circle</span></button>
                             </div>
                         </div>
