@@ -142,28 +142,30 @@
                         <label>Název</label>
                         <input type="text" x-model="editingTask.title">
 
-                        <label>Popis</label>
-                        <textarea x-model="editingTask.description" placeholder="Podrobnosti..."></textarea>
+                        <template x-if="mode === 'master'">
+                            <label>Popis</label>
+                            <textarea x-model="editingTask.description" placeholder="Podrobnosti..."></textarea>
 
-                        <div style="display: flex; gap: 10px;">
-                            <div style="flex:1">
-                                <label>Priorita</label>
-                                <select x-model="editingTask.priority">
-                                    <option value="">-- Žádná --</option>
-                                    <template x-for="p in priorities" :key="p.id">
-                                        <option :value="p.id" x-text="p.title" :selected="p.id == editingTask.priority"></option>
-                                    </template>
-                                </select>
+                            <div style="display: flex; gap: 10px;">
+                                <div style="flex:1">
+                                    <label>Priorita</label>
+                                    <select x-model="editingTask.priority">
+                                        <option value="">-- Žádná --</option>
+                                        <template x-for="p in priorities" :key="p.id">
+                                            <option :value="p.id" x-text="p.title" :selected="p.id == editingTask.priority"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div style="flex:1">
+                                    <label>Status</label>
+                                    <select x-model="editingTask.status">
+                                        <template x-for="s in statuses" :key="s.id">
+                                            <option :value="s.id" x-text="s.title" :selected="s.id == editingTask.status"></option>
+                                        </template>
+                                    </select>
+                                </div>
                             </div>
-                            <div style="flex:1">
-                                <label>Status</label>
-                                <select x-model="editingTask.status">
-                                    <template x-for="s in statuses" :key="s.id">
-                                        <option :value="s.id" x-text="s.title" :selected="s.id == editingTask.status"></option>
-                                    </template>
-                                </select>
-                            </div>
-                        </div>
+                        </template>
 
                         <label>Termín</label>
                         <input type="datetime-local" x-model="editingTask.due_date">
