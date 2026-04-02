@@ -260,17 +260,19 @@
                 async loadData() {
                     if (!this.pb) return;
                     try {
-                        const [t, s, u, p] = await Promise.all([
+                        const allUsers = await this.pb.collection('users').getFullList();
+                        const filteredUsers = allUsers.filter(u => u.apps && u.apps.includes('pulse'));
+                        
+                        const [t, s, p] = await Promise.all([
                             this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task,priority' }),
                             this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' }),
-                            this.pb.collection('users').getFullList(),
                             this.pb.collection('pulse_priorities').getFullList({ sort: 'level' })
                         ]);
                         this.tasks = t; 
                         this.statuses = s; 
-                        this.availableUsers = u; 
+                        this.availableUsers = filteredUsers; 
                         this.priorities = p;
-                        console.log('Loaded users:', u.length, 'Loaded tasks:', t.length);
+                        console.log('All users:', allUsers.length, 'Filtered users with pulse:', filteredUsers.length, 'Loaded tasks:', t.length);
                     } catch (e) { console.error("Chyba při načítání dat:", e); }
                 },
 
