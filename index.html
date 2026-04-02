@@ -112,6 +112,7 @@
                                 <span x-text="task.title" style="font-weight:600"></span>
                             </div>
                             <div style="font-size:0.7rem; color:var(--text-dim); margin-top:3px; display: flex; align-items: center; gap: 6px;">
+                                <span style="display: inline-block; width: 18px;"></span>
                                 <template x-if="task.expand?.parent_task"><span x-text="task.expand.parent_task.title + ' • '"></span></template>
                                 <span x-text="task.due_date ? formatDate(task.due_date) : 'Bez termínu'"></span>
                             </div>
