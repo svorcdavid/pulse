@@ -178,18 +178,17 @@
                         </div>
 
                         <label>Přiřazení lidé</label>
-                        <div class="avatar-grid" style="margin-top: 8px;">
-                            <template x-for="userId in editingTask.assignee" :key="userId">
-                                <div style="position: relative; cursor: pointer; transition: 0.2s;" @click="editingTask.assignee = editingTask.assignee.filter(id => id !== userId)" :title="getUserName(userId)">
-                                    <img :src="getUserAvatar(userId)" class="avatar-large" style="border-color: var(--primary); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--primary); transition: 0.2s;">
-                                    <div style="position: absolute; top: 0; right: 0; background: var(--primary); color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--card); font-size: 10px;">
-                                        <span class="icon" style="font-size: 12px;">close</span>
-                                    </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;">
+                            <template x-for="u in availableUsers" :key="u.id">
+                                <div style="position: relative; cursor: pointer; transition: 0.2s;" @click="editingTask.assignee.includes(u.id) ? editingTask.assignee = editingTask.assignee.filter(id => id !== u.id) : editingTask.assignee.push(u.id)" :title="u.name || u.email">
+                                    <img :src="getUserAvatar(u.id)" class="avatar-large" style="transition: 0.2s;">
+                                    <template x-if="editingTask.assignee.includes(u.id)">
+                                        <div style="position: absolute; top: -2px; right: -2px; background: var(--primary); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--card);">
+                                            <span class="icon" style="font-size: 12px;">check</span>
+                                        </div>
+                                    </template>
                                 </div>
                             </template>
-                            <button type="button" @click="openAddAssigneeDialog()" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); background: white; cursor: pointer; color: var(--primary); font-size: 20px; display: flex; align-items: center; justify-content: center; transition: 0.2s;" onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 2px var(--bg), 0 0 0 3px var(--primary)'" onmouseout="this.style.borderColor='var(--border)'; this.style.boxShadow=''">
-                                <span class="icon" style="font-size: 20px;">add</span>
-                            </button>
                         </div>
 
                         <label>Nadřazený úkol</label>
@@ -203,27 +202,6 @@
                         <div style="display:flex; gap:10px; margin-top:20px">
                             <button @click="editingTask = null" style="flex:1; padding:12px; background:#f1f5f9; border:none; border-radius:8px; cursor:pointer">Zavřít</button>
                             <button @click="saveEdit()" style="flex:2; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700">Uložit</button>
-                        </div>
-                    </div>
-                </div>
-            </template>
-
-            <template x-if="showAddAssigneeDialog">
-                <div class="modal-overlay" @click.self="showAddAssigneeDialog = false">
-                    <div class="modal" style="max-width: 400px;">
-                        <h2 style="margin: 0 0 1rem 0;">Přidat členy</h2>
-                        
-                        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-                            <template x-for="u in availableUsers.filter(u => !editingTask.assignee.includes(u.id))" :key="u.id">
-                                <button type="button" @click="editingTask.assignee.push(u.id)" style="flex: 0 1 calc(50% - 6px); display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--border); background: white; border-radius: 8px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.borderColor='var(--primary)'; this.style.backgroundColor='#f1f5f9'" onmouseout="this.style.borderColor='var(--border)'; this.style.backgroundColor='white'">
-                                    <img :src="getUserAvatar(u.id)" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
-                                    <span x-text="u.name || u.email" style="font-size: 0.9rem; color: var(--text-main); font-weight: 500; flex: 1; text-align: left;"></span>
-                                </button>
-                            </template>
-                        </div>
-
-                        <div style="display:flex; gap:10px; margin-top:20px">
-                            <button @click="showAddAssigneeDialog = false" style="flex:1; padding:12px; background:#f1f5f9; border:none; border-radius:8px; cursor:pointer">Zavřít</button>
                         </div>
                     </div>
                 </div>
@@ -247,7 +225,6 @@
                 newTaskTitle: '', 
                 editingTask: null, 
                 onlyMine: false,
-                showAddAssigneeDialog: false,
 
                 async initPB() {
                     window.pulse = this; 
@@ -415,10 +392,6 @@
                         localDate = (new Date(d - tzOffset)).toISOString().slice(0, 16);
                     }
                     this.editingTask = { ...task, due_date: localDate };
-                },
-
-                openAddAssigneeDialog() {
-                    this.showAddAssigneeDialog = true;
                 },
 
                 async saveEdit() {
