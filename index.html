@@ -175,11 +175,18 @@
                         </div>
 
                         <label>Přiřazení lidé</label>
-                        <select x-model="editingTask.assignee" multiple style="height: 80px;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;">
                             <template x-for="u in availableUsers" :key="u.id">
-                                <option :value="u.id" x-text="u.name || u.email"></option>
+                                <div style="position: relative; cursor: pointer;" @click="editingTask.assignee.includes(u.id) ? editingTask.assignee = editingTask.assignee.filter(id => id !== u.id) : editingTask.assignee.push(u.id)">
+                                    <img :src="getUserAvatar(u.id)" :title="u.name || u.email" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); transition: 0.2s;" :style="editingTask.assignee.includes(u.id) ? 'border-color: var(--primary); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--primary)' : ''">
+                                    <template x-if="editingTask.assignee.includes(u.id)">
+                                        <div style="position: absolute; bottom: -2px; right: -2px; background: var(--primary); color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--card);">
+                                            <span class="icon" style="font-size: 14px;">check</span>
+                                        </div>
+                                    </template>
+                                </div>
                             </template>
-                        </select>
+                        </div>
 
                         <label>Nadřazený úkol</label>
                         <select x-model="editingTask.parent_task">
