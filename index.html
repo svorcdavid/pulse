@@ -263,7 +263,7 @@
                         const [t, s, u, p] = await Promise.all([
                             this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task,priority' }),
                             this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' }),
-                            this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' }),
+                            this.pb.collection('users').getFullList({ filter: 'apps.contains("pulse")' }),
                             this.pb.collection('pulse_priorities').getFullList({ sort: 'level' })
                         ]);
                         this.tasks = t; 
