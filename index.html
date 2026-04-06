@@ -373,12 +373,15 @@
                     return u ? (u.name || u.email) : 'Neznámý';
                 },
 
+                formatLocalDateTime(date) {
+                    const pad = (value) => String(value).padStart(2, '0');
+                    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+                },
+
                 setQuickDate(days) {
                     const d = new Date();
                     d.setDate(d.getDate() + days);
-                    const tzOffset = d.getTimezoneOffset() * 60000;
-                    const localISOTime = (new Date(d - tzOffset)).toISOString().slice(0, 16);
-                    this.editingTask.due_date = localISOTime;
+                    this.editingTask.due_date = this.formatLocalDateTime(d);
                 },
 
                 get rootTasks() {
@@ -437,9 +440,7 @@
                 openEdit(task) {
                     let localDate = '';
                     if (task.due_date) {
-                        const d = new Date(task.due_date);
-                        const tzOffset = d.getTimezoneOffset() * 60000;
-                        localDate = (new Date(d - tzOffset)).toISOString().slice(0, 16);
+                        localDate = this.formatLocalDateTime(new Date(task.due_date));
                     }
                     this.editingTask = { ...task, due_date: localDate };
                 },
