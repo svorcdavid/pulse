@@ -310,7 +310,7 @@
                             return this.onlyMine ? (notClosed && t.assignee.includes(this.user?.id)) : notClosed;
                         })
                         .sort((a, b) => {
-                            // 1. Řazení podle data (nejbližší nahoře, bez data dole)
+                            // 1. Řazení podle data
                             if (!a.due_date && !b.due_date) {
                                 return 0;
                             }
@@ -324,7 +324,7 @@
                             const dateB = new Date(b.due_date).getTime();
                             if (dateA !== dateB) return dateA - dateB;
 
-                            // 2. Sekundární řazení podle priority level
+                            // 2. Řazení podle priority
                             const levelA = a.expand?.priority?.level ?? 999;
                             const levelB = b.expand?.priority?.level ?? 999;
                             return levelA - levelB;
@@ -333,7 +333,6 @@
 
                 getUserAvatar(userId) {
                     const u = this.availableUsers.find(x => x.id === userId);
-                    // POUŽITO .getURL() s velkým URL
                     if (u && u.avatar) return this.pb.files.getURL(u, u.avatar, { thumb: '64x64' });
                     return `https://ui-avatars.com/api/?name=${encodeURIComponent(u?.name || 'U')}&background=random`;
                 },
@@ -346,7 +345,6 @@
                 setQuickDate(days) {
                     const d = new Date();
                     d.setDate(d.getDate() + days);
-                    // Korekce na lokální čas pro input
                     const tzOffset = d.getTimezoneOffset() * 60000;
                     const localISOTime = (new Date(d - tzOffset)).toISOString().slice(0, 16);
                     this.editingTask.due_date = localISOTime;
