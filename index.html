@@ -49,7 +49,7 @@
         .avatar-large { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); object-fit: cover; background: #eee; }
 
         .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
-        .modal { background: var(--card); padding: 1.5rem; border-radius: 8px; width: 100%; max-width: 550px; max-height: 95vh; overflow-y: auto; }
+        .modal { background: var(--card); padding: 1.5rem; border-radius: 8px; width: 100%; max-width: min(550px, 90vw); max-height: 95vh; overflow-y: auto; }
         .modal label { display: block; margin-top: 12px; font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
         .modal input, .modal select, .modal textarea { width: 100%; padding: 10px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; outline: none; font-size: 0.95rem; }
         
@@ -60,6 +60,12 @@
         .tree-node { margin-bottom: 4px; }
         .tree-card { padding: 6px 12px; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; border: 1px solid transparent; }
         .tree-card:hover { background: #f1f5f9; border-color: var(--border); }
+
+        @keyframes pulse {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0); }
+            100% { transform: translateX(100%); }
+        }
     </style>
 </head>
 <body x-data="pulseApp()" x-init="initPB()">
@@ -78,6 +84,16 @@
 
     <template x-if="user">
         <div class="app-container" x-cloak>
+            <template x-if="loading">
+                <div class="modal-overlay" style="background: rgba(255,255,255,0.85); backdrop-filter: blur(2px);">
+                    <div class="modal" style="max-width: 320px; text-align: center;">
+                        <div style="font-size: 1rem; margin-bottom: 12px; color: var(--text-main);">Načítám data…</div>
+                        <div style="height: 4px; width: 100%; background: var(--border); border-radius: 999px; overflow: hidden;">
+                            <div style="width: 40%; height: 100%; background: var(--primary); animation: pulse 1.2s infinite;"></div>
+                        </div>
+                    </div>
+                </div>
+            </template>
             <header>
                 <div style="font-weight: 800; font-size: 1.4rem; color: var(--primary)">PULSE</div>
                 <div style="display: flex; gap: 12px; align-items: center;">
@@ -249,6 +265,7 @@
                 newTaskTitle: '', 
                 editingTask: null, 
                 onlyMine: false,
+                loading: false,
 
                 async initPB() {
                     if (this.pbUrl) {
@@ -277,10 +294,15 @@
                         this.pb.authStore.clear(); 
                     }
                     this.user = null; 
+                    this.tasks = []; 
+                    this.statuses = []; 
+                    this.priorities = []; 
+                    this.availableUsers = []; 
                 },
 
                 async loadData() {
                     if (!this.pb) return;
+                    this.loading = true;
                     try {
                         const allUsers = await this.pb.collection('users').getFullList();
                         const filteredUsers = allUsers.filter(u => u.apps && u.apps.includes('pulse'));
@@ -295,6 +317,7 @@
                         this.availableUsers = filteredUsers; 
                         this.priorities = p;
                     } catch (e) { console.error("Chyba při načítání dat:", e); }
+                    finally { this.loading = false; }
                 },
 
                 async loadTask(id) {
@@ -413,9 +436,10 @@
                 completeTaskById(id) { const t = this.tasks.find(x => x.id === id); if (t) this.completeTask(t); },
 
                 async addTask() {
-                    if (!this.newTaskTitle) return;
+                    const title = this.newTaskTitle.trim();
+                    if (!title) return;
                     await this.pb.collection('pulse_tasks').create({ 
-                        title: this.newTaskTitle, 
+                        title, 
                         assignee: [this.user.id], 
                         creator: this.user.id 
                     });
