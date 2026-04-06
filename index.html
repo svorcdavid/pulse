@@ -311,8 +311,17 @@
                         })
                         .sort((a, b) => {
                             // 1. Řazení podle data (nejbližší nahoře, bez data dole)
-                            const dateA = a.due_date ? new Date(a.due_date).getTime() : 253402300799000; 
-                            const dateB = b.due_date ? new Date(b.due_date).getTime() : 253402300799000;
+                            if (!a.due_date && !b.due_date) {
+                                return 0;
+                            }
+                            if (!a.due_date) {
+                                return 1;
+                            }
+                            if (!b.due_date) {
+                                return -1;
+                            }
+                            const dateA = new Date(a.due_date).getTime();
+                            const dateB = new Date(b.due_date).getTime();
                             if (dateA !== dateB) return dateA - dateB;
 
                             // 2. Sekundární řazení podle priority level
