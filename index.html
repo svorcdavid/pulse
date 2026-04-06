@@ -298,9 +298,41 @@
                     } catch (e) { console.error("Chyba při načítání dat:", e); }
                 },
 
+                async loadTask(id) {
+                    if (!this.pb) return null;
+                    try {
+                        return await this.pb.collection('pulse_tasks').getOne(id, { expand: 'status,parent_task,priority' });
+                    } catch (e) {
+                        console.error('Chyba při načítání úkolu:', e);
+                        return null;
+                    }
+                },
+
                 async subscribeToTasks() {
                     if (!this.pb) return;
-                    await this.pb.collection('pulse_tasks').subscribe('*', () => this.loadData());
+                    await this.pb.collection('pulse_tasks').subscribe('*', async (e) => {
+                        if (!e || !e.record) return;
+
+                        if (e.action === 'delete') {
+                            this.tasks = this.tasks.filter(task => task.id !== e.record.id);
+                            return;
+                        }
+
+                        let updatedTask = e.record;
+                        if (!updatedTask.expand) {
+                            const loaded = await this.loadTask(updatedTask.id);
+                            if (loaded) {
+                                updatedTask = loaded;
+                            }
+                        }
+
+                        const index = this.tasks.findIndex(task => task.id === updatedTask.id);
+                        if (index !== -1) {
+                            this.tasks.splice(index, 1, updatedTask);
+                        } else {
+                            this.tasks.push(updatedTask);
+                        }
+                    });
                 },
 
                 get filteredTasks() {
