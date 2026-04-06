@@ -135,8 +135,28 @@
             <div x-show="mode === 'master'">
                 <div class="card" style="padding: 1.5rem;">
                     <h3 style="margin-top:0">Strom projektů</h3>
-                    <div class="tree-container">
-                        <div x-html="renderTree()"></div>
+                            <div class="tree-container">
+                        <template x-if="!flatTree.length">
+                            <p style="color:var(--text-dim); text-align:center">Žádné úkoly.</p>
+                        </template>
+                        <template x-for="item in flatTree" :key="item.task.id">
+                            <div class="tree-node" :style="'padding-left: ' + (item.depth * 24) + 'px'">
+                                <div class="tree-card">
+                                    <div style="flex:1; cursor:pointer; display:flex; align-items:center; gap:8px" @click="openEditById(item.task.id)">
+                                        <span class="icon" style="font-size:18px; color:var(--text-dim)" x-text="getNodeIcon(item.task)"></span>
+                                        <span :style="item.task.expand?.status?.is_closed ? 'text-decoration:line-through; opacity:0.5' : ''" x-text="item.task.title"></span>
+                                    </div>
+                                    <div style="display:flex; gap:8px; align-items:center">
+                                        <div class="avatar-stack">
+                                            <template x-for="userId in item.task.assignee" :key="userId">
+                                                <img :src="getUserAvatar(userId)" class="avatar" :title="getUserName(userId)">
+                                            </template>
+                                        </div>
+                                        <button class="icon-btn check-icon-btn" @click="completeTaskById(item.task.id)"><span class="icon" style="font-size:20px">check_circle</span></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -218,7 +238,7 @@
             return {
                 user: null, 
                 pb: null, 
-                pbUrl: localStorage.getItem('pulse_pb_url') || '',
+                pbUrl: '',
                 email: '', 
                 pass: '', 
                 mode: 'core', 
@@ -247,7 +267,6 @@
                 async login() {
                     this.pb = new PocketBase(this.pbUrl);
                     await this.pb.collection('users').authWithPassword(this.email, this.pass);
-                    localStorage.setItem('pulse_pb_url', this.pbUrl);
                     this.user = this.pb.authStore.model; 
                     await this.loadData();
                     this.subscribeToTasks();
@@ -276,7 +295,6 @@
                         this.statuses = s; 
                         this.availableUsers = filteredUsers; 
                         this.priorities = p;
-                        console.log('All users:', allUsers.length, 'Filtered users with pulse:', filteredUsers.length, 'Loaded tasks:', t.length);
                     } catch (e) { console.error("Chyba při načítání dat:", e); }
                 },
 
@@ -325,37 +343,24 @@
                     this.editingTask.due_date = localISOTime;
                 },
 
-                renderTree() {
-                    let html = '';
-                    const roots = this.tasks.filter(t => !t.parent_task);
-                    roots.forEach(task => { 
-                        const node = this.renderNode(task, 0);
-                        if (node) html += node;
-                    });
-                    return html || '<p style="color:var(--text-dim); text-align:center">Žádné úkoly.</p>';
+                get rootTasks() {
+                    return this.tasks.filter(t => !t.parent_task);
                 },
 
-                renderNode(task, depth) {
-                    const children = this.tasks.filter(t => t.parent_task === task.id);
-                    if (this.onlyMine && !task.assignee.includes(this.user?.id) && !children.some(c => this.hasAssignedRecursive(c))) return '';
+                get flatTree() {
+                    const result = [];
+                    const build = (task, depth) => {
+                        const children = this.tasks.filter(t => t.parent_task === task.id);
+                        if (this.onlyMine && !task.assignee.includes(this.user?.id) && !children.some(c => this.hasAssignedRecursive(c))) return;
+                        result.push({ task, depth });
+                        children.forEach(child => build(child, depth + 1));
+                    };
+                    this.rootTasks.forEach(task => build(task, 0));
+                    return result;
+                },
 
-                    const isClosed = task.expand?.status?.is_closed;
-                    const avatarsHtml = task.assignee.map(uid => `<img src="${this.getUserAvatar(uid)}" class="avatar" style="width:20px; height:20px; margin-left:-6px">`).join('');
-
-                    return `
-                        <div class="tree-node" style="padding-left: ${depth * 24}px">
-                            <div class="tree-card">
-                                <div style="flex:1; cursor:pointer; display:flex; align-items:center; gap:8px" onclick="window.pulse.openEditById('${task.id}')">
-                                    <span class="icon" style="font-size:18px; color:var(--text-dim)">${children.length ? 'folder_open' : 'description'}</span>
-                                    <span style="${isClosed ? 'text-decoration:line-through; opacity:0.5' : ''}">${task.title}</span>
-                                </div>
-                                <div style="display:flex; gap:8px; align-items:center">
-                                    <div class="avatar-stack">${avatarsHtml}</div>
-                                    <button class="icon-btn check-icon-btn" onclick="window.pulse.completeTaskById('${task.id}')"><span class="icon" style="font-size:20px">check_circle</span></button>
-                                </div>
-                            </div>
-                        </div>
-                    ` + children.map(child => this.renderNode(child, depth + 1)).join('');
+                getNodeIcon(task) {
+                    return this.tasks.some(t => t.parent_task === task.id) ? 'folder_open' : 'description';
                 },
 
                 hasAssignedRecursive(task) {
