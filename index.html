@@ -366,11 +366,11 @@
                     if (!this.pb) return;
                     this.loading = true;
                     try {
-                        const allUsers = await this.pb.collection('users').getFullList();
-                        const filteredUsers = allUsers.filter(u => u.apps && u.apps.includes('pulse'));
+                        const allUsers = await this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' });
+                        const filteredUsers = allUsers;
                         
                         const [t, s, p] = await Promise.all([
-                            this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task,priority' }),
+                            this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task,priority', filter: 'status.is_closed = false' }),
                             this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' }),
                             this.pb.collection('pulse_priorities').getFullList({ sort: 'level' })
                         ]);
@@ -436,14 +436,18 @@
                         } else {
                             this.tasks.push(updatedTask);
                         }
+
+                        // Remove closed tasks to keep only open ones in memory
+                        if (updatedTask.expand?.status?.is_closed) {
+                            this.tasks = this.tasks.filter(t => t.id !== updatedTask.id);
+                        }
                     });
                 },
 
                 get filteredTasks() {
                     return this.tasks
                         .filter(t => {
-                            const notClosed = !t.expand?.status?.is_closed;
-                            return this.onlyMine ? (notClosed && t.assignee.includes(this.user?.id)) : notClosed;
+                            return this.onlyMine ? t.assignee.includes(this.user?.id) : true;
                         })
                         .sort((a, b) => {
                             // 1. Řazení podle data
