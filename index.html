@@ -79,6 +79,7 @@
                 <input type="email" x-model="email" placeholder="Email" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid var(--border)">
                 <input type="password" x-model="pass" placeholder="Heslo" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid var(--border)">
                 <button @click="login()" style="width:100%; padding:12px; border-radius:8px; border:none; background:var(--primary); color:white; font-weight:600; cursor:pointer">Vstoupit</button>
+                <div x-show="errorMessage" x-text="errorMessage" style="color: red; margin-top: 10px; font-size: 0.9rem;"></div>
             </div>
         </div>
     </template>
@@ -258,6 +259,7 @@
                 pbUrl: localStorage.getItem('pulse_pb_url') || '',
                 email: '', 
                 pass: '', 
+                errorMessage: '',
                 mode: 'core', 
                 tasks: [], 
                 availableUsers: [], 
@@ -282,11 +284,17 @@
                 },
 
                 async login() {
-                    this.pb = new PocketBase(this.pbUrl);
-                    await this.pb.collection('users').authWithPassword(this.email, this.pass);
-                    this.user = this.pb.authStore.model; 
-                    await this.loadData();
-                    this.subscribeToTasks();
+                    this.errorMessage = '';
+                    try {
+                        this.pb = new PocketBase(this.pbUrl);
+                        await this.pb.collection('users').authWithPassword(this.email, this.pass);
+                        this.user = this.pb.authStore.model; 
+                        await this.loadData();
+                        this.subscribeToTasks();
+                    } catch (e) {
+                        this.errorMessage = 'Chyba při přihlášení: ' + (e.message || 'Neznámá chyba');
+                        console.error("Chyba při přihlášení:", e);
+                    }
                 },
 
                 logout() { 
@@ -317,8 +325,12 @@
                         this.statuses = s; 
                         this.availableUsers = filteredUsers; 
                         this.priorities = p;
-                    } catch (e) { console.error("Chyba při načítání dat:", e); }
-                    finally { this.loading = false; }
+                    } catch (e) {
+                        this.errorMessage = 'Chyba při načítání dat: ' + (e.message || 'Neznámá chyba');
+                        console.error("Chyba při načítání dat:", e);
+                    } finally {
+                        this.loading = false;
+                    }
                 },
 
                 async loadTask(id) {
