@@ -6,6 +6,7 @@
     <title>Pulse</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300,0,0" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <style>
@@ -412,15 +413,8 @@
                     return u ? (u.name || u.email) : 'Neznámý';
                 },
 
-                formatLocalDateTime(date) {
-                    const pad = (value) => String(value).padStart(2, '0');
-                    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-                },
-
                 setQuickDate(days) {
-                    const d = new Date();
-                    d.setDate(d.getDate() + days);
-                    this.editingTask.due_date = this.formatLocalDateTime(d);
+                    this.editingTask.due_date = dayjs().add(days, 'day').format('YYYY-MM-DDTHH:mm');
                 },
 
                 get rootTasks() {
@@ -480,7 +474,7 @@
                 openEdit(task) {
                     let localDate = '';
                     if (task.due_date) {
-                        localDate = this.formatLocalDateTime(new Date(task.due_date));
+                        localDate = dayjs(task.due_date).format('YYYY-MM-DDTHH:mm');
                     }
                     this.editingTask = { ...task, due_date: localDate };
                 },
@@ -490,7 +484,7 @@
                     const data = { 
                         title: this.sanitize(title), 
                         description: this.sanitize(description), 
-                        due_date: due_date ? new Date(due_date).toISOString() : null, 
+                        due_date: due_date ? dayjs(due_date).toISOString() : null, 
                         assignee, 
                         priority: priority || null, 
                         status, 
