@@ -20,7 +20,7 @@ A simple task management application built on Alpine.js and PocketBase for manag
 Create the following collections in the PocketBase admin panel:
 
 #### 1. users (standard collection)
-- Add a custom field `apps` (JSON array, e.g., `["pulse"]`) for filtering/enabling app users.
+- Add a custom field `apps` (JSON array, e.g., `["pulse"]` or list) for filtering/enabling app users.
 
 #### 2. pulse_tasks
 Fields:
