@@ -67,6 +67,59 @@
             50% { transform: translateX(0); }
             100% { transform: translateX(100%); }
         }
+
+        .login-input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--border); }
+        .login-btn { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--primary); color: white; font-weight: 600; cursor: pointer; }
+        .error-msg { color: red; margin-top: 10px; font-size: 0.9rem; }
+
+        .loading-overlay { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(2px); }
+        .loading-modal { max-width: 320px; text-align: center; }
+        .loading-text { font-size: 1rem; margin-bottom: 12px; color: var(--text-main); }
+        .loading-bar { height: 4px; width: 100%; background: var(--border); border-radius: 999px; overflow: hidden; }
+        .loading-progress { width: 40%; height: 100%; background: var(--primary); animation: pulse 1.2s infinite; }
+
+        .pulse-title { font-weight: 800; font-size: 1.4rem; color: var(--primary); }
+
+        .quick-input { border: none; flex: 1; padding: 10px; font-size: 1rem; color: var(--text-main); outline: none; background: transparent; width: 100%; }
+        .quick-btn { color: var(--primary); }
+
+        .task-content { flex: 1; cursor: pointer; }
+        .task-details { display: flex; flex-direction: column; gap: 3px; }
+        .task-header { display: flex; align-items: center; gap: 8px; }
+        .priority-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .task-title { font-weight: 600; }
+        .task-meta { font-size: 0.7rem; color: var(--text-dim); display: flex; align-items: center; gap: 6px; margin-left: 18px; }
+        .task-assignees { display: flex; gap: 12px; align-items: center; }
+        .task-actions { display: flex; gap: 4px; align-items: center; border-left: 1px solid var(--border); padding-left: 8px; }
+
+        .master-card { padding: 1.5rem; }
+        .master-title { margin-top: 0; }
+        .tree-container { /* existing */ }
+        .no-tasks { color: var(--text-dim); text-align: center; }
+        .tree-node { margin-bottom: 4px; }
+        .tree-card { padding: 6px 12px; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; border: 1px solid transparent; }
+        .tree-card:hover { background: #f1f5f9; border-color: var(--border); }
+        .tree-content { flex: 1; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .tree-icon { font-size: 18px; color: var(--text-dim); }
+        .tree-title { }
+        .tree-actions { display: flex; gap: 8px; align-items: center; }
+
+        .edit-modal { /* existing */ }
+        .modal-title { margin: 0 0 1rem 0; }
+        .modal-section { /* for div x-show */ }
+        .modal-input { width: 100%; padding: 10px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; outline: none; font-size: 0.95rem; }
+        .modal-textarea { width: 100%; padding: 10px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; outline: none; font-size: 0.95rem; resize: vertical; }
+        .modal-row { display: flex; gap: 10px; }
+        .modal-col { flex: 1; }
+        .date-input { width: 100%; padding: 10px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; outline: none; font-size: 0.95rem; }
+        .assignee-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+        .assignee-item { position: relative; cursor: pointer; transition: 0.2s; }
+        .assignee-avatar { transition: 0.2s; }
+        .assignee-check { position: absolute; top: -2px; right: -2px; background: var(--primary); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--card); }
+        .parent-select { width: 100%; padding: 10px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; outline: none; font-size: 0.95rem; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { flex: 1; padding: 12px; background: #f1f5f9; border: none; border-radius: 8px; cursor: pointer; }
+        .btn-save { flex: 2; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
     </style>
 </head>
 <body x-data="pulseApp()" x-init="initPB()">
@@ -75,11 +128,11 @@
         <div class="app-container" style="display: flex; justify-content: center; padding-top: 10vh;">
             <div class="card" style="padding: 2rem; width: 100%; max-width: 380px;">
                 <h2 style="margin: 0 0 1.5rem 0;">Pulse</h2>
-                <input type="text" x-model="pbUrl" placeholder="URL PocketBase" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid var(--border)">
-                <input type="email" x-model="email" placeholder="Email" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid var(--border)">
-                <input type="password" x-model="pass" placeholder="Heslo" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid var(--border)">
-                <button @click="login()" style="width:100%; padding:12px; border-radius:8px; border:none; background:var(--primary); color:white; font-weight:600; cursor:pointer">Vstoupit</button>
-                <div x-show="errorMessage" x-text="errorMessage" style="color: red; margin-top: 10px; font-size: 0.9rem;"></div>
+                <input type="text" x-model="pbUrl" placeholder="URL PocketBase" class="login-input">
+                <input type="email" x-model="email" placeholder="Email" class="login-input">
+                <input type="password" x-model="pass" placeholder="Heslo" class="login-input">
+                <button @click="login()" class="login-btn">Vstoupit</button>
+                <div x-show="errorMessage" x-text="errorMessage" class="error-msg"></div>
             </div>
         </div>
     </template>
@@ -87,17 +140,17 @@
     <template x-if="user">
         <div class="app-container" x-cloak>
             <template x-if="loading">
-                <div class="modal-overlay" style="background: rgba(255,255,255,0.85); backdrop-filter: blur(2px);">
-                    <div class="modal" style="max-width: 320px; text-align: center;">
-                        <div style="font-size: 1rem; margin-bottom: 12px; color: var(--text-main);">Načítám data…</div>
-                        <div style="height: 4px; width: 100%; background: var(--border); border-radius: 999px; overflow: hidden;">
-                            <div style="width: 40%; height: 100%; background: var(--primary); animation: pulse 1.2s infinite;"></div>
+                <div class="modal-overlay loading-overlay">
+                    <div class="modal loading-modal">
+                        <div class="loading-text">Načítám data…</div>
+                        <div class="loading-bar">
+                            <div class="loading-progress"></div>
                         </div>
                     </div>
                 </div>
             </template>
             <header>
-                <div style="font-weight: 800; font-size: 1.4rem; color: var(--primary)">PULSE</div>
+                <div class="pulse-title">PULSE</div>
                 <div style="display: flex; gap: 12px; align-items: center;">
                     <div class="mode-switcher">
                         <button class="mode-btn" :class="mode === 'core' && 'active'" @click="mode = 'core'">Core</button>
@@ -112,37 +165,37 @@
             </header>
 
             <div class="card quick-add">
-                <input type="text" x-model="newTaskTitle" @keyup.enter="addTask()" placeholder="koupit mléko..">
-                <button @click="addTask()" class="icon-btn" style="color: var(--primary)"><span class="icon">add_circle</span></button>
+                <input type="text" x-model="newTaskTitle" @keyup.enter="addTask()" placeholder="koupit mléko.." class="quick-input">
+                <button @click="addTask()" class="icon-btn quick-btn"><span class="icon">add_circle</span></button>
             </div>
 
             <div x-show="mode === 'core'" class="task-list">
                 <template x-for="task in filteredTasks" :key="task.id">
                     <div class="card task-item">
-                        <div style="flex:1; cursor:pointer" @click="openEdit(task)">
-                            <div style="display: flex; flex-direction: column; gap: 3px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="task-content" @click="openEdit(task)">
+                            <div class="task-details">
+                                <div class="task-header">
                                     <template x-if="task.expand?.priority">
-                                        <span :style="'width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background:' + task.expand.priority.color"></span>
+                                        <span class="priority-dot" :style="'background:' + task.expand.priority.color"></span>
                                     </template>
                                     <template x-if="!task.expand?.priority">
-                                        <span style="display: inline-block; width: 10px; height: 10px;"></span>
+                                        <span class="priority-dot" style="display: inline-block;"></span>
                                     </template>
-                                    <span x-text="task.title" style="font-weight:600"></span>
+                                    <span x-text="task.title" class="task-title"></span>
                                 </div>
-                                <div style="font-size:0.7rem; color:var(--text-dim); display: flex; align-items: center; gap: 6px; margin-left: 18px;">
+                                <div class="task-meta">
                                     <template x-if="task.expand?.parent_task"><span x-text="task.expand.parent_task.title + ' • '"></span></template>
                                     <span x-text="task.due_date ? formatDate(task.due_date) : 'Bez termínu'"></span>
                                 </div>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 12px; align-items: center;">
+                        <div class="task-assignees">
                             <div class="avatar-stack">
                                 <template x-for="userId in task.assignee" :key="userId">
                                     <img :src="getUserAvatar(userId)" class="avatar" :title="getUserName(userId)">
                                 </template>
                             </div>
-                            <div style="display: flex; gap: 4px; align-items: center; border-left: 1px solid var(--border); padding-left: 8px;">
+                            <div class="task-actions">
                                 <button class="icon-btn check-icon-btn" @click="completeTask(task)"><span class="icon">check_circle</span></button>
                             </div>
                         </div>
@@ -151,20 +204,20 @@
             </div>
 
             <div x-show="mode === 'master'">
-                <div class="card" style="padding: 1.5rem;">
-                    <h3 style="margin-top:0">Strom projektů</h3>
+                <div class="card master-card">
+                    <h3 class="master-title">Strom projektů</h3>
                             <div class="tree-container">
                         <template x-if="!flatTree.length">
-                            <p style="color:var(--text-dim); text-align:center">Žádné úkoly.</p>
+                            <p class="no-tasks">Žádné úkoly.</p>
                         </template>
                         <template x-for="item in flatTree" :key="item.task.id">
                             <div class="tree-node" :style="'padding-left: ' + (item.depth * 24) + 'px'">
                                 <div class="tree-card">
-                                    <div style="flex:1; cursor:pointer; display:flex; align-items:center; gap:8px" @click="openEditById(item.task.id)">
-                                        <span class="icon" style="font-size:18px; color:var(--text-dim)" x-text="getNodeIcon(item.task)"></span>
-                                        <span :style="item.task.expand?.status?.is_closed ? 'text-decoration:line-through; opacity:0.5' : ''" x-text="item.task.title"></span>
+                                    <div class="tree-content" @click="openEditById(item.task.id)">
+                                        <span class="icon tree-icon" x-text="getNodeIcon(item.task)"></span>
+                                        <span :style="item.task.expand?.status?.is_closed ? 'text-decoration:line-through; opacity:0.5' : ''" x-text="item.task.title" class="tree-title"></span>
                                     </div>
-                                    <div style="display:flex; gap:8px; align-items:center">
+                                    <div class="tree-actions">
                                         <div class="avatar-stack">
                                             <template x-for="userId in item.task.assignee" :key="userId">
                                                 <img :src="getUserAvatar(userId)" class="avatar" :title="getUserName(userId)">
@@ -182,28 +235,28 @@
             <template x-if="editingTask">
                 <div class="modal-overlay" @click.self="editingTask = null">
                     <div class="modal">
-                        <h2 style="margin: 0 0 1rem 0;">Upravit úkol</h2>
+                        <h2 class="modal-title">Upravit úkol</h2>
                         
                         <label>Název</label>
-                        <input type="text" x-model="editingTask.title">
+                        <input type="text" x-model="editingTask.title" class="modal-input">
 
-                        <div x-show="mode === 'master'">
+                        <div x-show="mode === 'master'" class="modal-section">
                             <label>Popis</label>
-                            <textarea x-model="editingTask.description" placeholder="Podrobnosti..."></textarea>
+                            <textarea x-model="editingTask.description" placeholder="Podrobnosti..." class="modal-textarea"></textarea>
 
-                            <div style="display: flex; gap: 10px;">
-                                <div style="flex:1">
+                            <div class="modal-row">
+                                <div class="modal-col">
                                     <label>Priorita</label>
-                                    <select x-model="editingTask.priority">
+                                    <select x-model="editingTask.priority" class="modal-input">
                                         <option value="">-- Žádná --</option>
                                         <template x-for="p in priorities" :key="p.id">
                                             <option :value="p.id" x-text="p.title" :selected="p.id == editingTask.priority"></option>
                                         </template>
                                     </select>
                                 </div>
-                                <div style="flex:1">
+                                <div class="modal-col">
                                     <label>Status</label>
-                                    <select x-model="editingTask.status">
+                                    <select x-model="editingTask.status" class="modal-input">
                                         <template x-for="s in statuses" :key="s.id">
                                             <option :value="s.id" x-text="s.title" :selected="s.id == editingTask.status"></option>
                                         </template>
@@ -213,19 +266,19 @@
                         </div>
 
                         <label>Termín</label>
-                        <input type="datetime-local" x-model="editingTask.due_date">
+                        <input type="datetime-local" x-model="editingTask.due_date" class="date-input">
                         <div class="date-presets">
                             <button class="btn-date" @click="setQuickDate(0)">Dnes</button>
                             <button class="btn-date" @click="setQuickDate(1)">Zítra</button>
                         </div>
 
                         <label>Přiřazení lidé</label>
-                        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;">
+                        <div class="assignee-grid">
                             <template x-for="u in availableUsers" :key="u.id">
-                                <div style="position: relative; cursor: pointer; transition: 0.2s;" @click="editingTask.assignee.includes(u.id) ? editingTask.assignee = editingTask.assignee.filter(id => id !== u.id) : editingTask.assignee.push(u.id)" :title="u.name || u.email">
-                                    <img :src="getUserAvatar(u.id)" class="avatar-large" style="transition: 0.2s;">
+                                <div class="assignee-item" @click="editingTask.assignee.includes(u.id) ? editingTask.assignee = editingTask.assignee.filter(id => id !== u.id) : editingTask.assignee.push(u.id)" :title="u.name || u.email">
+                                    <img :src="getUserAvatar(u.id)" class="avatar-large assignee-avatar">
                                     <template x-if="editingTask.assignee.includes(u.id)">
-                                        <div style="position: absolute; top: -2px; right: -2px; background: var(--primary); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--card);">
+                                        <div class="assignee-check">
                                             <span class="icon" style="font-size: 12px;">check</span>
                                         </div>
                                     </template>
@@ -234,16 +287,16 @@
                         </div>
 
                         <label>Nadřazený úkol</label>
-                        <select x-model="editingTask.parent_task">
+                        <select x-model="editingTask.parent_task" class="parent-select">
                             <option value="">-- Žádný (Top Level) --</option>
                             <template x-for="t in tasks.filter(t => t.id !== editingTask.id)" :key="t.id">
                                 <option :value="t.id" x-text="t.title"></option>
                             </template>
                         </select>
 
-                        <div style="display:flex; gap:10px; margin-top:20px">
-                            <button @click="editingTask = null" style="flex:1; padding:12px; background:#f1f5f9; border:none; border-radius:8px; cursor:pointer">Zavřít</button>
-                            <button @click="saveEdit()" style="flex:2; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700">Uložit</button>
+                        <div class="modal-buttons">
+                            <button @click="editingTask = null" class="btn-cancel">Zavřít</button>
+                            <button @click="saveEdit()" class="btn-save">Uložit</button>
                         </div>
                     </div>
                 </div>
