@@ -366,11 +366,11 @@
                     if (!this.pb) return;
                     this.loading = true;
                     try {
-                        const allUsers = await this.pb.collection('users').getFullList({ filter: 'apps ~ "pulse"' });
-                        const filteredUsers = allUsers;
+                        const allUsers = await this.pb.collection('users').getFullList();
+                        const filteredUsers = allUsers.filter(u => u.apps && u.apps.includes('pulse'));
                         
                         const [t, s, p] = await Promise.all([
-                            this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task,priority', filter: 'status.is_closed = false' }),
+                            this.pb.collection('pulse_tasks').getFullList({ sort: '-created', expand: 'status,parent_task,priority', filter: 'status.is_closed != true' }),
                             this.pb.collection('pulse_statuses').getFullList({ sort: 'sort_order' }),
                             this.pb.collection('pulse_priorities').getFullList({ sort: 'level' })
                         ]);
