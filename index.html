@@ -341,7 +341,23 @@
                         }
 
                         let updatedTask = e.record;
-                        if (!updatedTask.expand) {
+                        const existingTask = this.tasks.find(t => t.id === updatedTask.id);
+
+                        if (existingTask && e.action === 'update') {
+                            // Merge with existing expand to avoid unnecessary fetches
+                            updatedTask.expand = existingTask.expand;
+                            // Only fetch full data if expand-related fields changed
+                            const expandChanged = updatedTask.status !== existingTask.status ||
+                                                  updatedTask.parent_task !== existingTask.parent_task ||
+                                                  updatedTask.priority !== existingTask.priority;
+                            if (expandChanged) {
+                                const loaded = await this.loadTask(updatedTask.id);
+                                if (loaded) {
+                                    updatedTask = loaded;
+                                }
+                            }
+                        } else if (!existingTask || e.action === 'create') {
+                            // For new tasks or if not found, fetch with expands
                             const loaded = await this.loadTask(updatedTask.id);
                             if (loaded) {
                                 updatedTask = loaded;
