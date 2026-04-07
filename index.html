@@ -439,7 +439,7 @@
                     const title = this.newTaskTitle.trim();
                     if (!title) return;
                     await this.pb.collection('pulse_tasks').create({ 
-                        title, 
+                        title: this.sanitize(title), 
                         assignee: [this.user.id], 
                         creator: this.user.id 
                     });
@@ -472,8 +472,8 @@
                 async saveEdit() {
                     const { id, title, description, status, due_date, assignee, parent_task, priority } = this.editingTask;
                     const data = { 
-                        title, 
-                        description, 
+                        title: this.sanitize(title), 
+                        description: this.sanitize(description), 
                         due_date: due_date ? new Date(due_date).toISOString() : null, 
                         assignee, 
                         priority: priority || null, 
@@ -485,7 +485,14 @@
                     await this.loadData();
                 },
 
-                formatDate(d) { return new Date(d).toLocaleDateString('cs-CZ', {day:'numeric', month:'short'}); }
+                formatDate(d) { return new Date(d).toLocaleDateString('cs-CZ', {day:'numeric', month:'short'}); },
+
+                sanitize(str) {
+                    if (!str) return '';
+                    const div = document.createElement('div');
+                    div.textContent = str;
+                    return div.innerHTML;
+                }
             }
         }
     </script>
